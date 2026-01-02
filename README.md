@@ -1,49 +1,141 @@
-## Repository Structure
+# Identra
 
-```
+Identra is a confidential operating system layer designed to act as a unified **Identity and Memory Vault** for AI interactions. It solves AI fragmentation by providing a single, secure source of truth that travels with the user across different AI tools.
+
+The system functions as a **Fortified Library** between the User and External AI, utilizing local-first vectorization, encrypted storage, and secure compute enclaves.
+
+---
+
+## Architecture Overview
+
+This repository is a **Rust Workspace Monorepo** managing the entire Identra stack:
+
+- **The Nexus (Desktop):** Rust + Tauri v2  
+  Handles local state, global hotkeys, and system hooks.
+
+- **The View (UI):** React (Next.js) + Shadcn UI  
+  Static frontend running inside the Tauri WebView.
+
+- **The Tunnel (Gateway):** Rust (Axum / Tonic)  
+  High-performance gRPC gateway for all external communication.
+
+- **The Vault (Security):** Rust + AWS Nitro Enclaves  
+  Secure compute enclave for cryptographic key management.
+
+- **The Brain (RAG):** Python (FastAPI)  
+  Isolated AI service responsible for RAG orchestration and inference.
+
+---
+
+## Repository Structure & Team Assignments
+
+Strict adherence to these folder ownership rules is **mandatory** to avoid merge conflicts and architectural drift.
+
+```text
 identra/
-├── .github/                        # CI/CD Workflows (Rust Lint, Docker Build)
-├── Cargo.toml                      # Workspace Definition
-├── Justfile                        # Command Runner (like Make, but better)
+├── apps/                               # Backend Services
+│   ├── tunnel-gateway/                 # OWNER: Sarthak (Rust gRPC Entry Point)
+│   ├── enclave-service/                # OWNER: Sarthak (AWS Nitro Enclave Logic)
+│   └── brain-service/                  # OWNER: Sailesh (Python RAG & AI Logic)
 │
-├── infra/                          # Infrastructure as Code
-│   ├── k8s/                        # Helm Charts for Kubernetes
-│   ├── terraform/                  # AWS Provisioning (Nitro, RDS, VPC)
-│   └── nitro/                      # Enclave Image (EIF) Dockerfiles
+├── clients/                            # Frontend & Desktop
+│   └── ghost-desktop/
+│       ├── src-tauri/                  # OWNER: Manish (Rust Backend / System Architecture)
+│       └── src/                        # OWNER: OmmPrakash (React / Next.js UI)
 │
-├── clients/                        # FRONTEND & DESKTOP
-│   └── ghost-desktop/              # The Tauri Client
-│       ├── src-tauri/              # Rust Backend (The Nexus)
-│       │   ├── src/nexus.rs        # State Manager
-│       │   ├── src/screener.rs     # Windows/Mac Accessibility Hooks
-│       │   └── src/cortex.rs       # Local ONNX Runtime
-│       └── src-ui/                 # Next.js Frontend (The View)
-│           ├── app/overlay/        # Cmd+K Route
-│           └── app/dashboard/      # Main Chat Route
+├── libs/                               # Shared Libraries
+│   ├── identra-core/                   # SHARED: Manish / Sarthak (Errors, Logging)
+│   ├── identra-crypto/                 # SHARED: Manish / Sarthak (Encryption Primitives)
+│   ├── identra-proto/                  # SHARED: Manish / Sarthak (gRPC Protobufs)
+│   └── identra-auth/                   # SHARED: Manish (OIDC / Auth Logic)
 │
-├── apps/                           # BACKEND SERVICES
-│   ├── tunnel-gateway/             # Rust gRPC Server (Entry Point)
-│   │   └── src/main.rs             # Handles streams from Desktop
-│   │
-│   ├── enclave-service/            # Rust Secure Logic (Runs in Nitro)
-│   │   └── src/kms.rs              # Key Management (The Vault)
-│   │
-│   └── brain-service/              # Python RAG Engine (The AI) <--- THE BRAIN
-│       ├── main.py                 # FastAPI App
-│       ├── rag_chain.py            # LangChain/LlamaIndex Logic
-│       └── prompts/                # System Prompt Templates
-│
-├── libs/                           # SHARED RUST CRATES
-│   ├── identra-core/               # Telemetry, Config, Errors
-│   ├── identra-proto/              # Shared gRPC Definitions (.proto)
-│   ├── identra-crypto/             # AES-256-GCM, Noise Protocol
-│   └── identra-auth/               # OIDC/Hydra Integration
-│
-└── tools/                          # Developer Scripts
-    ├── init_db.sh                  # Spin up local Postgres + pgvector
-    └── mock_enclave.sh             # Run enclave logic locally for testing
-
+├── infra/                              # OWNER: Arpit (Terraform, Kubernetes, AWS)
+├── tools/                              # OWNER: Arpit (Dev Scripts, Docker)
+├── Cargo.toml                          # Rust Workspace Configuration
+└── Justfile                            # Unified Command Runner
 ```
 
+## Critical Git Protocol
 
-# identra
+To maintain a clean Git history and avoid rebasing conflicts, every contributor must follow this workflow.
+
+- Rule 1: Always Pull Before Coding. Never start work without syncing with the remote repository.
+
+- Rule 2: Never Commit Directly to main. Use feature branches for any non-trivial work.
+
+## Safe Git Workflow
+- Start Your Session
+
+- Run immediately when opening a terminal:
+```
+git checkout main
+git pull origin main
+```
+- Create a Feature Branch (Recommended)
+```
+git checkout -b feature/your-feature-name
+```
+- Make Changes
+
+Modify only files inside your assigned directories.
+
+Do not refactor or touch unrelated modules.
+
+- Commit Changes
+```
+git add .
+git commit -m "feat: concise description of changes"
+```
+Sync Before Pushing
+```
+git pull origin main --rebase
+```
+Push Changes
+```
+git push origin branch-name
+```
+## Development Setup
+
+We use Just as the unified task runner.
+
+Prerequisites
+
+- Rust (latest stable)
+- Node.js (LTS)
+- Yarn
+- Docker
+
+Quick Start
+Install Dependencies
+# Rust workspace dependencies
+cargo build
+
+# Frontend dependencies
+cd clients/ghost-desktop
+yarn install
+
+Running Services
+Desktop App (Manish, OmmPrakash)
+just dev-desktop
+
+Backend Gateway (Sarthak)
+just dev-gateway
+
+Infrastructure & Databases (Arpit)
+just db-up
+
+Design Principles
+
+Local-first by default
+
+Zero-trust security model
+
+Explicit boundaries between AI, memory, and identity
+
+Deterministic state over opaque AI behavior
+
+Rust for safety-critical paths
+
+License
+
+Proprietary. All rights reserved.
