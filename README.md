@@ -1,5 +1,7 @@
 # Identra
 
+# manish sarthak basu omm arpit
+
 Identra is a confidential operating system layer designed to act as a unified **Identity and Memory Vault** for AI interactions. It solves AI fragmentation by providing a single, secure source of truth that travels with the user across different AI tools.
 
 The system functions as a **Fortified Library** between the User and External AI, utilizing local-first vectorization, encrypted storage, and secure compute enclaves.
@@ -64,17 +66,22 @@ To maintain a clean Git history and avoid rebasing conflicts, every contributor 
 - Rule 2: Never Commit Directly to main. Use feature branches for any non-trivial work.
 
 ## Safe Git Workflow
+
 - Start Your Session
 
 - Run immediately when opening a terminal:
+
 ```
 git checkout main
 git pull origin main
 ```
+
 - Create a Feature Branch (Recommended)
+
 ```
 git checkout -b feature/your-feature-name
 ```
+
 - Make Changes
 
 Modify only files inside your assigned directories.
@@ -82,18 +89,24 @@ Modify only files inside your assigned directories.
 Do not refactor or touch unrelated modules.
 
 - Commit Changes
+
 ```
 git add .
 git commit -m "feat: concise description of changes"
 ```
+
 Sync Before Pushing
+
 ```
 git pull origin main --rebase
 ```
+
 Push Changes
+
 ```
 git push origin branch-name
 ```
+
 ## Development Setup
 
 We use Just as the unified task runner.
@@ -107,10 +120,13 @@ Prerequisites
 
 Quick Start
 Install Dependencies
+
 # Rust workspace dependencies
+
 cargo build
 
 # Frontend dependencies
+
 cd clients/ghost-desktop
 yarn install
 
