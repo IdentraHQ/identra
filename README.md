@@ -1,7 +1,5 @@
 # Identra
 
-# manish sarthak basu omm arpit
-
 Identra is a confidential operating system layer designed to act as a unified **Identity and Memory Vault** for AI interactions. It solves AI fragmentation by providing a single, secure source of truth that travels with the user across different AI tools.
 
 The system functions as a **Fortified Library** between the User and External AI, utilizing local-first vectorization, encrypted storage, and secure compute enclaves.
