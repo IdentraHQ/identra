@@ -21,5 +21,8 @@ identra-proto = { path = "../../../libs/identra-proto" }   # <--- ADD THIS
 # --- TAURI DEPENDENCIES ---
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }

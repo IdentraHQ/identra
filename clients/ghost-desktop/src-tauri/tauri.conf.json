@@ -12,9 +12,19 @@
   "app": {
     "windows": [
       {
-        "title": "ghost-desktop",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "title": "Identra OS",
+        "url": "index.html",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "alwaysOnTop": false
       }
     ],
     "security": {
