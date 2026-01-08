@@ -1,8 +1,7 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
   "productName": "ghost-desktop",
   "version": "0.1.0",
-  "identifier": "com.keirsalterego.ghost-desktop",
+  "identifier": "com.ghost-desktop.app",
   "build": {
     "beforeDevCommand": "yarn dev",
     "devUrl": "http://localhost:1420",
@@ -13,18 +12,25 @@
     "windows": [
       {
         "label": "main",
-        "title": "Identra OS",
-        "url": "index.html",
+        "title": "Identra Ghost",
+        "url": "/",
         "width": 1200,
         "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
-        "center": true,
         "resizable": true,
-        "fullscreen": false,
-        "decorations": true,
-        "transparent": false,
-        "alwaysOnTop": false
+        "visible": true
+      },
+      {
+        "label": "launcher",
+        "title": "Launcher",
+        "url": "/launcher",
+        "width": 600,
+        "height": 100,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "center": true
       }
     ],
     "security": {

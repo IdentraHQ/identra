@@ -1,7 +1,7 @@
 use std::sync::Mutex;
-use serde::{Serialize, Deserialize};
+use aes_gcm::{Key, Aes256Gcm};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
 pub enum VaultStatus {
     Locked,
     Unlocked,
@@ -9,30 +9,27 @@ pub enum VaultStatus {
     Offline,
 }
 
-#[derive(Debug, Serialize, Clone)]
-pub struct EnclaveMetrics {
-    pub cpu_usage: f32,
-    pub memory_encrypted: usize,
-    pub active_keys: u32,
-}
-
 pub struct NexusState {
     pub status: Mutex<VaultStatus>,
     pub active_identity: Mutex<Option<String>>,
-    pub metrics: Mutex<EnclaveMetrics>,
+    pub metrics: Mutex<VaultMetrics>,
+    // This holds the session key in RAM
+    pub session_key: Mutex<Option<Key<Aes256Gcm>>>, 
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct VaultMetrics {
+    pub memory_encrypted: usize,
+    pub active_tunnels: u32,
 }
 
 impl NexusState {
     pub fn new() -> Self {
         Self {
             status: Mutex::new(VaultStatus::Locked),
-            // Default to my admin identity for dev
-            active_identity: Mutex::new(Some("manish.Admin".to_string())),
-            metrics: Mutex::new(EnclaveMetrics {
-                cpu_usage: 0.0,
-                memory_encrypted: 0,
-                active_keys: 0,
-            }),
+            active_identity: Mutex::new(None),
+            metrics: Mutex::new(VaultMetrics::default()),
+            session_key: Mutex::new(None),
         }
     }
 }

@@ -4,3 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# AES-GCM: The main encryption algorithm (Authenticated Encryption)
+aes-gcm = "0.10.3"
+
+# Rand: To generate random "Nonces" (Number used only once) and Keys
+rand = "0.9.2"
+
+# Base64: To turn binary encrypted garbage into a string we can send over JSON
+base64 = "0.22.1"
+
+# Anyhow: Easy error handling
+anyhow = "1.0.95"
+
+# Zeroize: Wipes memory when we are done so keys don't linger in RAM
+zeroize = "1.8.1"
