@@ -1,14 +1,13 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+// Include generated protobuf code from build.rs
+pub mod health {
+    tonic::include_proto!("identra.health.v1");
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub mod vault {
+    tonic::include_proto!("identra.vault.v1");
 }
+
+pub mod memory {
+    tonic::include_proto!("identra.memory.v1");
+}
+

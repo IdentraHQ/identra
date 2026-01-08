@@ -1,0 +1,38 @@
+[package]
+name = "vault-daemon"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "vault-daemon"
+path = "src/main.rs"
+
+[dependencies]
+# Shared Libraries
+identra-core = { path = "../../libs/identra-core" }
+identra-crypto = { path = "../../libs/identra-crypto" }
+
+# Security & Cryptography
+keyring = "2"           # Cross-platform OS keychain
+secrecy = "0.8"         # Secret-holding types that zeroize
+zeroize = { version = "1", features = ["derive"] }
+region = "3"            # Memory locking (mlock)
+argon2 = "0.5"          # Key derivation
+chacha20poly1305 = "0.10"  # Fast AEAD cipher
+
+# Async Runtime
+tokio = { version = "1", features = ["full"] }
+
+# IPC Communication
+interprocess = { version = "2.2", features = ["tokio"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Encoding
+base64 = "0.22"
+
+# Error Handling
+anyhow = "1"
+thiserror = "1"

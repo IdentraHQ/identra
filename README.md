@@ -19,8 +19,8 @@ This repository is a **Rust Workspace Monorepo** managing the entire Identra sta
 - **The Tunnel (Gateway):** Rust (Axum / Tonic)  
   High-performance gRPC gateway for all external communication.
 
-- **The Vault (Security):** Rust + AWS Nitro Enclaves  
-  Secure compute enclave for cryptographic key management.
+- **The Vault (Security):** Rust + OS Keychain Integration  
+  Local secure daemon for cryptographic key management (MVP uses OS-native secure storage; AWS Nitro Enclaves planned for production).
 
 - **The Brain (RAG):** Python (FastAPI)  
   Isolated AI service responsible for RAG orchestration and inference.
@@ -35,7 +35,7 @@ Strict adherence to these folder ownership rules is **mandatory** to avoid merge
 identra/
 ├── apps/                               # Backend Services
 │   ├── tunnel-gateway/                 # OWNER: Sarthak (Rust gRPC Entry Point)
-│   ├── enclave-service/                # OWNER: Sarthak (AWS Nitro Enclave Logic)
+│   ├── vault-daemon/                   # OWNER: Sarthak (Local Secure Vault - MVP uses OS keychain)
 │   └── brain-service/                  # OWNER: Sailesh (Python RAG & AI Logic)
 │
 ├── clients/                            # Frontend & Desktop
@@ -150,6 +150,33 @@ Deterministic state over opaque AI behavior
 
 Rust for safety-critical paths
 
+## MVP Architecture Note
+
+**For the initial MVP release, we are using local OS-native secure storage instead of AWS Nitro Enclaves:**
+
+- **Vault Security:** OS Keychain (Windows Credential Manager/DPAPI, macOS Keychain, Linux Secret Service)
+- **Data Storage:** Local encrypted SQLite with SQLCipher
+- **Process Isolation:** Separate Rust daemon process with memory locking
+- **Future:** AWS Nitro Enclaves integration planned for production cloud deployment
+
+This approach allows rapid MVP development while maintaining strong local security boundaries.
+┌─────────────────────────┐
+│  Desktop App (Tauri)    │
+│  clients/ghost-desktop  │
+└───────────┬─────────────┘
+            │ IPC (encrypted)
+┌───────────▼─────────────┐
+│  Local Vault Daemon     │
+│  apps/vault-daemon      │
+│  ├─ OS Keychain         │
+│  ├─ Memory Encryption   │
+│  └─ Locked Memory       │
+└───────────┬─────────────┘
+            │
+┌───────────▼─────────────┐
+│  Local SQLite DB        │
+│  (Encrypted with SQLCipher)
+└─────────────────────────┘
 License
 
 Proprietary. All rights reserved.

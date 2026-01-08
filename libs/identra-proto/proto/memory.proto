@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package identra.memory.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Memory service for storing and retrieving AI context/memories
+service MemoryService {
+  // Store a memory/context
+  rpc StoreMemory(StoreMemoryRequest) returns (StoreMemoryResponse);
+  
+  // Retrieve memories by query
+  rpc QueryMemories(QueryMemoriesRequest) returns (QueryMemoriesResponse);
+  
+  // Retrieve a specific memory by ID
+  rpc GetMemory(GetMemoryRequest) returns (GetMemoryResponse);
+  
+  // Delete a memory
+  rpc DeleteMemory(DeleteMemoryRequest) returns (DeleteMemoryResponse);
+  
+  // Search memories with vector similarity
+  rpc SearchMemories(SearchMemoriesRequest) returns (SearchMemoriesResponse);
+}
+
+message Memory {
+  string id = 1;
+  string content = 2;
+  map<string, string> metadata = 3;
+  repeated float embedding = 4; // Vector embedding
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  repeated string tags = 7;
+}
+
+message StoreMemoryRequest {
+  string content = 1;
+  map<string, string> metadata = 2;
+  repeated string tags = 3;
+}
+
+message StoreMemoryResponse {
+  string memory_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message QueryMemoriesRequest {
+  string query = 1;
+  int32 limit = 2;
+  map<string, string> filters = 3;
+}
+
+message QueryMemoriesResponse {
+  repeated Memory memories = 1;
+  int32 total_count = 2;
+}
+
+message GetMemoryRequest {
+  string memory_id = 1;
+}
+
+message GetMemoryResponse {
+  Memory memory = 1;
+}
+
+message DeleteMemoryRequest {
+  string memory_id = 1;
+}
+
+message DeleteMemoryResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message SearchMemoriesRequest {
+  repeated float query_embedding = 1;
+  int32 limit = 2;
+  float similarity_threshold = 3;
+}
+
+message SearchMemoriesResponse {
+  repeated MemoryMatch matches = 1;
+}
+
+message MemoryMatch {
+  Memory memory = 1;
+  float similarity_score = 2;
+}

@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package identra.vault.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Vault service for secure key management
+service VaultService {
+  // Store a key securely
+  rpc StoreKey(StoreKeyRequest) returns (StoreKeyResponse);
+  
+  // Retrieve a key
+  rpc RetrieveKey(RetrieveKeyRequest) returns (RetrieveKeyResponse);
+  
+  // Delete a key
+  rpc DeleteKey(DeleteKeyRequest) returns (DeleteKeyResponse);
+  
+  // List all key IDs
+  rpc ListKeys(ListKeysRequest) returns (ListKeysResponse);
+  
+  // Check if a key exists
+  rpc KeyExists(KeyExistsRequest) returns (KeyExistsResponse);
+}
+
+message StoreKeyRequest {
+  string key_id = 1;
+  bytes key_data = 2;
+  map<string, string> metadata = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message StoreKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RetrieveKeyRequest {
+  string key_id = 1;
+}
+
+message RetrieveKeyResponse {
+  bytes key_data = 1;
+  map<string, string> metadata = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message DeleteKeyRequest {
+  string key_id = 1;
+}
+
+message DeleteKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListKeysRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListKeysResponse {
+  repeated string key_ids = 1;
+  string next_page_token = 2;
+}
+
+message KeyExistsRequest {
+  string key_id = 1;
+}
+
+message KeyExistsResponse {
+  bool exists = 1;
+}

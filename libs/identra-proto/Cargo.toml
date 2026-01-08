@@ -1,6 +1,19 @@
 [package]
 name = "identra-proto"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+# gRPC/Protobuf
+tonic = "0.12"
+prost = "0.13"
+prost-types = "0.13"
+
+# Async
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+
+[build-dependencies]
+tonic-build = "0.12"

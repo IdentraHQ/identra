@@ -14,9 +14,13 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # --- YOUR SHARED LIBRARIES ---
-identra-core = { path = "../../../libs/identra-core" }     # <--- ADD THIS
-identra-crypto = { path = "../../../libs/identra-crypto" } # <--- ADD THIS
-identra-proto = { path = "../../../libs/identra-proto" }   # <--- ADD THIS
+identra-core = { path = "../../../libs/identra-core" }
+identra-crypto = { path = "../../../libs/identra-crypto" }
+identra-proto = { path = "../../../libs/identra-proto" }
+
+# --- IPC DEPENDENCIES ---
+interprocess = { version = "2.2", features = ["tokio"] }
+tokio = { version = "1", features = ["full"] }
 
 # --- TAURI DEPENDENCIES ---
 tauri = { version = "2", features = [] }

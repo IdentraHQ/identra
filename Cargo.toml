@@ -3,7 +3,7 @@ resolver = "2"
 
 members = [
     "apps/tunnel-gateway",
-    "apps/enclave-service",
+    "apps/vault-daemon",
     "libs/identra-core",
     "libs/identra-crypto",
     "libs/identra-proto",

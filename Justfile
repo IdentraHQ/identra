@@ -12,6 +12,10 @@ dev-desktop:
 dev-gateway:
     cargo run --bin tunnel-gateway
 
+# Run the Local Vault Daemon (Sarthak)
+dev-vault:
+    cargo run --bin vault-daemon
+
 # Check if everything compiles
 check:
     cargo check --workspace
