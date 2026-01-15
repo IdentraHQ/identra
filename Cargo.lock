@@ -5355,6 +5355,7 @@ dependencies = [
  "axum",
  "identra-core",
  "identra-proto",
+ "interprocess",
  "prost",
  "serde",
  "serde_json",
