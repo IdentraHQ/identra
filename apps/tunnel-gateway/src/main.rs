@@ -3,7 +3,11 @@ mod services;
 mod ipc_client;
 
 use error::Result;
-use services::{HealthService, VaultServiceImpl};
+use services::{
+    health::HealthService,
+    vault::VaultServiceImpl,
+    memory::MemoryServiceImpl,
+};
 use tonic::transport::Server;
 use tracing::{info, Level};
 use tracing_subscriber;
@@ -23,15 +27,18 @@ async fn main() -> Result<()> {
     // Initialize services
     let health_service = HealthService::new().into_server();
     let vault_service = VaultServiceImpl::new().into_server();
+    let memory_service = MemoryServiceImpl::new().into_server();
     
     info!("✅ Services initialized:");
     info!("   - Health Service");
     info!("   - Vault Service");
+    info!("   - Memory Service");
     
     // Start gRPC server
     Server::builder()
         .add_service(health_service)
         .add_service(vault_service)
+        .add_service(memory_service)
         .serve(addr)
         .await?;
     

@@ -5357,6 +5357,7 @@ dependencies = [
  "identra-proto",
  "interprocess",
  "prost",
+ "prost-types",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -5367,6 +5368,7 @@ dependencies = [
  "tower-http 0.5.2",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
