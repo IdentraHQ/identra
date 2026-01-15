@@ -1,5 +1,6 @@
 mod error;
 mod services;
+mod ipc_client;
 
 use error::Result;
 use services::{HealthService, VaultServiceImpl};
