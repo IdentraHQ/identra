@@ -8,6 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "proto/vault.proto",
                 "proto/memory.proto",
                 "proto/health.proto",
+                "proto/auth.proto",
             ],
             &["proto"],
         )?;

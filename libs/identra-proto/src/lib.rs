@@ -11,3 +11,7 @@ pub mod memory {
     tonic::include_proto!("identra.memory.v1");
 }
 
+pub mod auth {
+    tonic::include_proto!("identra.auth");
+}
+

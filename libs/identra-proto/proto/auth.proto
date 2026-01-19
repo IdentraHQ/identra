@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package identra.auth;
+
+// Authentication Service
+service AuthService {
+  // Register a new user
+  rpc Register (RegisterRequest) returns (RegisterResponse);
+  
+  // Login and get JWT token
+  rpc Login (LoginRequest) returns (LoginResponse);
+  
+  // Verify JWT token validity
+  rpc VerifyToken (VerifyTokenRequest) returns (VerifyTokenResponse);
+  
+  // Refresh an expired token
+  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
+}
+
+// Register Request
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+// Register Response
+message RegisterResponse {
+  bool success = 1;
+  string message = 2;
+  string user_id = 3;
+}
+
+// Login Request
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+// Login Response
+message LoginResponse {
+  bool success = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  int64 expires_in = 5; // seconds until expiration
+}
+
+// Verify Token Request
+message VerifyTokenRequest {
+  string token = 1;
+}
+
+// Verify Token Response
+message VerifyTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string username = 3;
+  int64 expires_at = 4;
+}
+
+// Refresh Token Request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// Refresh Token Response
+message RefreshTokenResponse {
+  bool success = 1;
+  string access_token = 2;
+  int64 expires_in = 3;
+}
