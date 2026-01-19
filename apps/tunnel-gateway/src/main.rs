@@ -1,13 +1,16 @@
+mod database;
 mod error;
 mod services;
 mod ipc_client;
 
+use database::MemoryDatabase;
 use error::Result;
 use services::{
     health::HealthService,
     vault::VaultServiceImpl,
     memory::MemoryServiceImpl,
 };
+use std::sync::Arc;
 use tonic::transport::Server;
 use tracing::{info, Level};
 use tracing_subscriber;
@@ -21,13 +24,27 @@ async fn main() -> Result<()> {
     
     info!("🚀 Identra Tunnel Gateway starting...");
     
+    // Initialize database
+    let db_path = std::env::current_dir()
+        .unwrap()
+        .join("data")
+        .join("memories.db");
+    
+    // Create data directory if it doesn't exist
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    
+    let db = Arc::new(MemoryDatabase::new(&db_path)?);
+    info!("💾 Database initialized at: {:?}", db_path);
+    
     let addr = "[::1]:50051".parse().unwrap();
     info!("📡 gRPC server listening on {}", addr);
     
     // Initialize services
     let health_service = HealthService::new().into_server();
     let vault_service = VaultServiceImpl::new().into_server();
-    let memory_service = MemoryServiceImpl::new().into_server();
+    let memory_service = MemoryServiceImpl::new(Arc::clone(&db)).into_server();
     
     info!("✅ Services initialized:");
     info!("   - Health Service");
