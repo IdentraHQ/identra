@@ -6,16 +6,23 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   
   useEffect(() => {
-    // Check if we're in the launcher window
     console.log("App mounted, pathname:", globalThis.location.pathname);
     setIsReady(true);
   }, []);
 
   if (!isReady) {
-    return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-identra-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-identra-primary to-identra-secondary flex items-center justify-center animate-pulse-subtle">
+            <div className="w-6 h-6 rounded-full bg-white/25"></div>
+          </div>
+          <p className="text-sm text-identra-text-tertiary">Loading Identra...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Determine which interface to show based on window label
   const isLauncher = globalThis.location.pathname === '/launcher.html';
   
   console.log("Rendering:", isLauncher ? "Launcher" : "ChatInterface");
