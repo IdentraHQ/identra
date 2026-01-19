@@ -16,6 +16,9 @@ pub enum GatewayError {
     
     #[error("Transport error: {0}")]
     Transport(#[from] tonic::transport::Error),
+    
+    #[error("Database error: {0}")]
+    Database(#[from] rusqlite::Error),
 }
 
 pub type Result<T> = std::result::Result<T, GatewayError>;

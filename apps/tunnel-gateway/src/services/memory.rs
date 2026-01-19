@@ -7,47 +7,19 @@ use identra_proto::memory::{
     DeleteMemoryRequest, DeleteMemoryResponse,
     SearchMemoriesRequest, SearchMemoriesResponse,
 };
+use crate::database::MemoryDatabase;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-#[derive(Clone, Debug)]
-struct StoredMemory {
-    id: String,
-    content: String,
-    metadata: HashMap<String, String>,
-    embedding: Vec<f32>,
-    created_at: prost_types::Timestamp,
-    updated_at: prost_types::Timestamp,
-    tags: Vec<String>,
-}
-
-impl From<StoredMemory> for Memory {
-    fn from(stored: StoredMemory) -> Self {
-        Memory {
-            id: stored.id,
-            content: stored.content,
-            metadata: stored.metadata,
-            embedding: stored.embedding,
-            created_at: Some(stored.created_at),
-            updated_at: Some(stored.updated_at),
-            tags: stored.tags,
-        }
-    }
-}
-
 pub struct MemoryServiceImpl {
-    // In-memory store for MVP (can be replaced with vector DB later)
-    memories: Arc<RwLock<HashMap<String, StoredMemory>>>,
+    db: Arc<MemoryDatabase>,
 }
 
 impl MemoryServiceImpl {
-    pub fn new() -> Self {
-        Self {
-            memories: Arc::new(RwLock::new(HashMap::new())),
-        }
+    pub fn new(db: Arc<MemoryDatabase>) -> Self {
+        Self { db }
     }
     
     pub fn into_server(self) -> MemoryServiceServer<Self> {
@@ -109,27 +81,24 @@ impl MemoryService for MemoryServiceImpl {
         let memory_id = Uuid::new_v4().to_string();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = prost_types::Timestamp {
-            seconds: now.as_secs() as i64,
-            nanos: now.subsec_nanos() as i32,
-        };
+            .unwrap()
+            .as_secs() as i64;
         
         // Generate embedding from content
         let embedding = Self::generate_embedding(&req.content);
         
-        let stored_memory = StoredMemory {
-            id: memory_id.clone(),
-            content: req.content.clone(),
-            metadata: req.metadata,
-            embedding,
-            created_at: timestamp.clone(),
-            updated_at: timestamp,
-            tags: req.tags,
-        };
-        
-        let mut memories = self.memories.write().await;
-        memories.insert(memory_id.clone(), stored_memory);
+        // Store in database
+        self.db
+            .store_memory(
+                &memory_id,
+                &req.content,
+                &embedding,
+                &req.metadata,
+                &req.tags,
+                now,
+                now,
+            )
+            .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
         
         tracing::info!("Stored memory: {} (content length: {})", memory_id, req.content.len());
         
@@ -145,34 +114,40 @@ impl MemoryService for MemoryServiceImpl {
         request: Request<QueryMemoriesRequest>,
     ) -> Result<Response<QueryMemoriesResponse>, Status> {
         let req = request.into_inner();
-        let memories = self.memories.read().await;
         
-        // Filter memories based on query (simple text matching for MVP)
-        let query_lower = req.query.to_lowercase();
-        let mut matching_memories: Vec<Memory> = memories
-            .values()
-            .filter(|m| {
-                m.content.to_lowercase().contains(&query_lower) ||
-                m.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+        let limit = if req.limit > 0 { req.limit } else { 50 };
+        
+        // Query database with text search
+        let rows = self
+            .db
+            .query_memories(&req.query, limit)
+            .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+        
+        let memories: Vec<Memory> = rows
+            .iter()
+            .map(|row| Memory {
+                id: row.id.clone(),
+                content: row.content.clone(),
+                metadata: row.get_metadata(),
+                embedding: row.get_embedding(),
+                created_at: Some(prost_types::Timestamp {
+                    seconds: row.created_at,
+                    nanos: 0,
+                }),
+                updated_at: Some(prost_types::Timestamp {
+                    seconds: row.updated_at,
+                    nanos: 0,
+                }),
+                tags: row.get_tags(),
             })
-            .cloned()
-            .map(Memory::from)
             .collect();
         
-        // Apply limit
-        let limit = if req.limit > 0 {
-            req.limit as usize
-        } else {
-            50 // Default limit
-        };
-        matching_memories.truncate(limit);
-        
-        let total_count = matching_memories.len() as i32;
+        let total_count = memories.len() as i32;
         
         tracing::info!("Query '{}' returned {} memories", req.query, total_count);
         
         Ok(Response::new(QueryMemoriesResponse {
-            memories: matching_memories,
+            memories,
             total_count,
         }))
     }
@@ -182,16 +157,34 @@ impl MemoryService for MemoryServiceImpl {
         request: Request<GetMemoryRequest>,
     ) -> Result<Response<GetMemoryResponse>, Status> {
         let req = request.into_inner();
-        let memories = self.memories.read().await;
         
-        let memory = memories
-            .get(&req.memory_id)
-            .cloned()
-            .map(Memory::from)
-            .ok_or_else(|| Status::not_found(format!("Memory '{}' not found", req.memory_id)))?;
+        let row = self
+            .db
+            .get_memory(&req.memory_id)
+            .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+        
+        let memory = row.map(|r| Memory {
+            id: r.id.clone(),
+            content: r.content.clone(),
+            metadata: r.get_metadata(),
+            embedding: r.get_embedding(),
+            created_at: Some(prost_types::Timestamp {
+                seconds: r.created_at,
+                nanos: 0,
+            }),
+            updated_at: Some(prost_types::Timestamp {
+                seconds: r.updated_at,
+                nanos: 0,
+            }),
+            tags: r.get_tags(),
+        });
+        
+        if memory.is_none() {
+            return Err(Status::not_found(format!("Memory '{}' not found", req.memory_id)));
+        }
         
         Ok(Response::new(GetMemoryResponse {
-            memory: Some(memory),
+            memory,
         }))
     }
     
@@ -200,9 +193,11 @@ impl MemoryService for MemoryServiceImpl {
         request: Request<DeleteMemoryRequest>,
     ) -> Result<Response<DeleteMemoryResponse>, Status> {
         let req = request.into_inner();
-        let mut memories = self.memories.write().await;
         
-        let existed = memories.remove(&req.memory_id).is_some();
+        let existed = self
+            .db
+            .delete_memory(&req.memory_id)
+            .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
         
         if existed {
             tracing::info!("Deleted memory: {}", req.memory_id);
@@ -228,17 +223,37 @@ impl MemoryService for MemoryServiceImpl {
             return Err(Status::invalid_argument("Query embedding cannot be empty"));
         }
         
-        let memories = self.memories.read().await;
+        // Load all memories for vector search
+        let rows = self
+            .db
+            .get_all_memories()
+            .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+        
         let mut matches: Vec<MemoryMatch> = Vec::new();
         
         // Calculate similarity for each memory
-        for memory in memories.values() {
-            let similarity = Self::cosine_similarity(&req.query_embedding, &memory.embedding);
+        for row in &rows {
+            let embedding = row.get_embedding();
+            let similarity = Self::cosine_similarity(&req.query_embedding, &embedding);
             
             // Filter by threshold
             if similarity >= req.similarity_threshold {
                 matches.push(MemoryMatch {
-                    memory: Some(Memory::from(memory.clone())),
+                    memory: Some(Memory {
+                        id: row.id.clone(),
+                        content: row.content.clone(),
+                        metadata: row.get_metadata(),
+                        embedding,
+                        created_at: Some(prost_types::Timestamp {
+                            seconds: row.created_at,
+                            nanos: 0,
+                        }),
+                        updated_at: Some(prost_types::Timestamp {
+                            seconds: row.updated_at,
+                            nanos: 0,
+                        }),
+                        tags: row.get_tags(),
+                    }),
                     similarity_score: similarity,
                 });
             }
@@ -258,11 +273,5 @@ impl MemoryService for MemoryServiceImpl {
         tracing::info!("Vector search returned {} matches", matches.len());
         
         Ok(Response::new(SearchMemoriesResponse { matches }))
-    }
-}
-
-impl Default for MemoryServiceImpl {
-    fn default() -> Self {
-        Self::new()
     }
 }
