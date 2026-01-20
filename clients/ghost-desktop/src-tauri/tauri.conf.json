@@ -22,7 +22,7 @@
       {
         "label": "launcher",
         "title": "Launcher",
-        "url": "/launcher",
+        "url": "/launcher.html",
         "width": 600,
         "height": 100,
         "decorations": false,
