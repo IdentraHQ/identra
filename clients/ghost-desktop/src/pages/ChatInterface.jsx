@@ -19,6 +19,8 @@ export default function ChatInterface() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [contextPanelOpen, setContextPanelOpen] = useState(true);
   const [selectedModel, setSelectedModel] = useState("claude"); // claude, gemini, gpt
+  const [sessionInitialized, setSessionInitialized] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState([]);
   const messagesEndRef = useRef(null);
 
   const models = [
@@ -33,11 +35,37 @@ export default function ChatInterface() {
     { id: 3, name: "Client_Meeting_Analysis", model: "gpt", size: "892 KB" }
   ];
 
+  // Auto-initialize session on startup
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        await invoke("initialize_session");
+        setSessionInitialized(true);
+        console.log("✅ Session initialized - vault unlocked");
+      } catch (err) {
+        console.error("❌ Session initialization failed:", err);
+        // Retry after 2 seconds
+        setTimeout(initSession, 2000);
+      }
+    };
+    initSession();
+  }, []);
+
   useEffect(() => {
     invoke("get_system_status")
       .then(setStatus)
       .catch(err => console.error("Failed to get status:", err));
-  }, []);
+    
+    // Load conversation history after session initialized
+    if (sessionInitialized) {
+      invoke("query_history", { limit: 50 })
+        .then(history => {
+          setConversationHistory(history);
+          console.log("📜 Loaded", history.length, "conversations from database");
+        })
+        .catch(err => console.error("Failed to load history:", err));
+    }
+  }, [sessionInitialized]); // Re-fetch status after session init
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,6 +73,12 @@ export default function ChatInterface() {
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing) return;
+
+    // Wait for session to be initialized
+    if (!sessionInitialized) {
+      console.warn("⏳ Waiting for session initialization...");
+      return;
+    }
 
     const userMessage = {
       id: Date.now(),
@@ -90,6 +124,44 @@ export default function ChatInterface() {
     }
   };
 
+  const handleLoadConversation = async (item) => {
+    try {
+      console.log("🔄 Loading conversation:", item.id);
+      console.log("📦 Encrypted content:", item.content.substring(0, 50));
+      
+      // Decrypt the encrypted content
+      const decryptedContent = await invoke("decrypt_memory", { encryptedVal: item.content });
+      
+      console.log("🔓 Decrypted content:", decryptedContent);
+      
+      // Load as a single message for now (in reality, you'd parse conversation history)
+      const loadedMessage = {
+        id: item.id,
+        role: "user",
+        content: decryptedContent,
+        timestamp: new Date(item.timestamp * 1000)
+      };
+      
+      setMessages([loadedMessage]);
+      
+      console.log("✅ Loaded and decrypted conversation:", item.id, loadedMessage);
+      
+      // Scroll to view
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } catch (err) {
+      console.error("❌ Failed to decrypt conversation:", err);
+      // Show error in UI
+      setMessages([{
+        id: Date.now(),
+        role: "assistant",
+        content: `Error loading conversation: ${err}`,
+        timestamp: new Date()
+      }]);
+    }
+  };
+
   const currentModel = models.find(m => m.id === selectedModel);
 
   return (
@@ -107,33 +179,38 @@ export default function ChatInterface() {
             <Search className="w-3.5 h-3.5 text-identra-text-tertiary" />
           </div>
           <div className="space-y-0.5">
-            <div className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary">
-              <div className="flex items-center gap-2.5 mb-1">
-                <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
-                  Project Alpha
-                </p>
+            {conversationHistory.length === 0 ? (
+              <div className="px-2.5 py-4 text-center">
+                <p className="text-[10px] text-identra-text-muted">No conversations yet</p>
               </div>
-              <p className="text-[10px] text-identra-text-muted pl-6">2h ago</p>
-            </div>
-            <div className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary">
-              <div className="flex items-center gap-2.5 mb-1">
-                <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
-                  API Integration
-                </p>
-              </div>
-              <p className="text-[10px] text-identra-text-muted pl-6">1d ago</p>
-            </div>
-            <div className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary">
-              <div className="flex items-center gap-2.5 mb-1">
-                <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
-                  Q4 Report
-                </p>
-              </div>
-              <p className="text-[10px] text-identra-text-muted pl-6">3d ago</p>
-            </div>
+            ) : (
+              conversationHistory.map((item) => {
+                const timestamp = new Date(item.timestamp * 1000);
+                const timeAgo = Math.floor((Date.now() - timestamp) / 1000 / 60);
+                const timeStr = timeAgo < 60 ? `${timeAgo}m ago` : 
+                               timeAgo < 1440 ? `${Math.floor(timeAgo / 60)}h ago` : 
+                               `${Math.floor(timeAgo / 1440)}d ago`;
+                
+                // Show first 30 chars of content as title
+                const title = item.content.substring(0, 30) + (item.content.length > 30 ? '...' : '');
+                
+                return (
+                  <div 
+                    key={item.id} 
+                    onClick={() => handleLoadConversation(item)}
+                    className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary"
+                  >
+                    <div className="flex items-center gap-2.5 mb-1">
+                      <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
+                      <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
+                        {title}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-identra-text-muted pl-6">{timeStr}</p>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 

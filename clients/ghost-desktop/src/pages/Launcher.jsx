@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, Zap } from "lucide-react";
+import { Command, ArrowRight } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
 export default function Launcher() {
@@ -10,8 +10,8 @@ export default function Launcher() {
   const messagesEndRef = useRef(null);
 
   const quickActions = [
-    { id: 1, text: "Summarize last meeting notes", icon: "📝" },
-    { id: 2, text: 'Search for "Authentication"', icon: "🔍" }
+    { id: 1, text: "Summarize last meeting notes", label: "SUMMARIZE" },
+    { id: 2, text: 'Search for "Authentication"', label: "SEARCH" }
   ];
 
   useEffect(() => {
@@ -78,77 +78,85 @@ export default function Launcher() {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center', 
-      padding: '32px',
+      padding: '40px',
       background: 'transparent',
       overflow: 'hidden'
     }}>
-      <div className="w-full max-w-2xl flex flex-col gap-6 items-center" style={{ background: 'transparent' }}>
+      <div className="w-full max-w-3xl flex flex-col gap-5 items-center" style={{ background: 'transparent' }}>
         
-        {/* Title */}
-        <div className="text-center space-y-2 animate-fade-in">
-          <h1 className="text-3xl font-light text-identra-text-primary tracking-tight">
+        {/* Title - Refined typography */}
+        <div className="text-center space-y-1.5">
+          <h1 className="text-2xl font-semibold text-identra-text-primary tracking-tight">
             Instant Invocation
           </h1>
-          <p className="text-sm text-identra-text-tertiary">
-            Summon Identra via <kbd className="px-2 py-0.5 bg-identra-surface-elevated border border-identra-border rounded text-xs font-mono">Win</kbd> + <kbd className="px-2 py-0.5 bg-identra-surface-elevated border border-identra-border rounded text-xs font-mono">K</kbd> Always robust, never intrusive.
+          <p className="text-xs text-identra-text-tertiary tracking-wide">
+            <kbd className="px-1.5 py-0.5 bg-identra-surface-elevated border border-identra-border text-[10px] font-mono">Alt</kbd>
+            {' + '}
+            <kbd className="px-1.5 py-0.5 bg-identra-surface-elevated border border-identra-border text-[10px] font-mono">Space</kbd>
+            {' • Always robust, never intrusive'}
           </p>
         </div>
 
-        {/* Search Box */}
-        <div className="w-full bg-identra-bg/98 backdrop-blur-2xl border border-identra-border-subtle rounded-2xl shadow-[0_32px_128px_rgba(0,0,0,0.8)] overflow-hidden animate-slide-up">
+        {/* Search Box - More refined */}
+        <div className="w-full bg-identra-bg border border-identra-border shadow-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
-            <div className="flex items-center gap-4 px-6 py-4">
-              <Zap className="w-5 h-5 text-identra-text-tertiary shrink-0" />
+            <div className="flex items-center gap-3 px-5 py-3.5">
+              <Command className="w-4 h-4 text-identra-text-tertiary shrink-0" strokeWidth={2} />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Ask Identra..."
-                className="flex-1 bg-transparent text-identra-text-primary placeholder:text-identra-text-muted outline-none text-base"
+                className="flex-1 bg-transparent text-identra-text-primary placeholder:text-identra-text-tertiary outline-none text-sm"
                 disabled={isProcessing}
                 autoFocus
               />
               {isProcessing && (
                 <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
+                  <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
+                  <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
                 </div>
               )}
             </div>
           </form>
         </div>
 
-        {/* Quick Actions - Only show when no messages */}
+        {/* Quick Actions - Infrastructure style */}
         {messages.length === 0 && (
-          <div className="w-full space-y-2 animate-fade-in">
+          <div className="w-full space-y-1.5">
             {quickActions.map((action) => (
               <button
                 key={action.id}
                 onClick={() => setQuery(action.text)}
-                className="w-full px-5 py-3 bg-identra-surface-elevated/80 backdrop-blur-xl hover:bg-identra-surface-hover border border-identra-border-subtle rounded-xl text-left transition-all group flex items-center gap-3"
+                className="w-full px-4 py-2.5 bg-identra-surface border border-identra-border hover:border-identra-primary hover:bg-identra-surface-hover transition-all duration-75 text-left flex items-center justify-between group"
               >
-                <span className="text-lg">{action.icon}</span>
-                <span className="text-sm text-identra-text-secondary group-hover:text-identra-text-primary">
-                  {action.text}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[9px] text-identra-text-tertiary font-semibold tracking-wider uppercase">
+                    {action.label}
+                  </span>
+                  <span className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary">
+                    {action.text}
+                  </span>
+                </div>
+                <ArrowRight className="w-3 h-3 text-identra-text-muted group-hover:text-identra-text-secondary transition-colors" />
               </button>
             ))}
           </div>
         )}
 
-        {/* Messages - Show above search when present */}
+        {/* Messages - Professional layout */}
         {messages.length > 0 && (
-          <div className="w-full bg-identra-bg/98 backdrop-blur-2xl border border-identra-border-subtle rounded-2xl shadow-[0_32px_128px_rgba(0,0,0,0.8)] p-6 max-h-[400px] overflow-y-auto space-y-4 animate-slide-down">
+          <div className="w-full bg-identra-bg border border-identra-border shadow-2xl p-5 max-h-[450px] overflow-y-auto space-y-3">
             {messages.map((msg) => (
               <div 
                 key={msg.id} 
                 className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
               >
-                <div className={`px-4 py-2.5 rounded-xl max-w-[85%] ${
+                <div className={`px-3 py-2 max-w-[90%] ${
                   msg.role === 'user' 
-                    ? 'bg-identra-surface-elevated text-identra-text-primary' 
+                    ? 'bg-identra-surface-elevated border border-identra-border text-identra-text-primary' 
                     : 'text-identra-text-primary'
                 }`}>
                   <p className="text-sm leading-relaxed">{msg.content}</p>
@@ -157,11 +165,11 @@ export default function Launcher() {
             ))}
             {isProcessing && (
               <div className="flex flex-col gap-1">
-                <div className="px-4 py-2.5 rounded-xl">
-                  <div className="flex gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                <div className="px-3 py-2">
+                  <div className="flex gap-1">
+                    <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
+                    <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
+                    <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
                   </div>
                 </div>
               </div>
@@ -170,12 +178,12 @@ export default function Launcher() {
           </div>
         )}
 
-        {/* Footer Status */}
-        <div className="flex items-center gap-2 text-[10px] text-identra-text-muted tracking-wider animate-fade-in">
+        {/* Footer Status - Compact */}
+        <div className="flex items-center gap-2 text-[9px] text-identra-text-muted tracking-[0.1em] font-semibold">
           <span>IDENTRA OS V1.0</span>
           <span>•</span>
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-identra-active animate-pulse-subtle"></div>
+            <div className="w-1 h-1 rounded-full bg-identra-active"></div>
             <span>SECURE ENCLAVE ACTIVE</span>
           </div>
         </div>
