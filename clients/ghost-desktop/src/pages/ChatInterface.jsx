@@ -16,9 +16,9 @@ export default function ChatInterface() {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [contextPanelOpen, setContextPanelOpen] = useState(true);
   const [selectedModel, setSelectedModel] = useState("claude"); // claude, gemini, gpt
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
   const models = [
@@ -94,133 +94,122 @@ export default function ChatInterface() {
 
   return (
     <div className="flex h-screen bg-identra-bg text-identra-text-primary font-sans antialiased">
-      
-      {/* Left Sidebar - Compressed visual weight */}
-      <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} transition-all duration-150 bg-identra-surface border-r border-identra-border-subtle overflow-hidden flex flex-col`}>
-        
-        {/* Recent Section */}
-        <div className="flex-1 overflow-y-auto px-3 py-6">
-          <div className="flex items-center justify-between px-2 mb-4">
-            <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
-              Recent
-            </h3>
-            <Search className="w-3.5 h-3.5 text-identra-text-tertiary" />
-          </div>
-          <div className="space-y-0.5">
-            <div className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary">
-              <div className="flex items-center gap-2.5 mb-1">
-                <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
-                  Project Alpha
-                </p>
-              </div>
-              <p className="text-[10px] text-identra-text-muted pl-6">2h ago</p>
-            </div>
-            <div className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary">
-              <div className="flex items-center gap-2.5 mb-1">
-                <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
-                  API Integration
-                </p>
-              </div>
-              <p className="text-[10px] text-identra-text-muted pl-6">1d ago</p>
-            </div>
-            <div className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary">
-              <div className="flex items-center gap-2.5 mb-1">
-                <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
-                  Q4 Report
-                </p>
-              </div>
-              <p className="text-[10px] text-identra-text-muted pl-6">3d ago</p>
-            </div>
+
+      {/* Left sidebar: Identra, user profile, reasoning engine */}
+      <aside className="w-64 bg-identra-surface border-r border-identra-border-subtle flex flex-col px-5 py-5">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="identra-logo-slot" />
+          <div className="identra-title-block">
+            <div className="identra-title">IDENTRA</div>
+            <div className="identra-user-label">OS Console</div>
           </div>
         </div>
 
-        {/* Reasoning Engine - Infrastructure configuration */}
-        <div className="px-3 py-5 border-t border-identra-border-subtle">
-          <div className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em] px-2 mb-3.5">
-            Reasoning Engine
-          </div>
-          <div className="space-y-1">
-            {models.map((model) => (
-              <button
-                key={model.id}
-                onClick={() => setSelectedModel(model.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-xs transition-all duration-75 border-l-2 ${
-                  selectedModel === model.id
-                    ? 'bg-identra-surface-elevated text-identra-text-primary border-identra-primary font-medium'
-                    : 'text-identra-text-tertiary hover:bg-identra-surface-hover hover:text-identra-text-secondary border-transparent font-normal'
-                }`}
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${selectedModel === model.id ? 'bg-identra-active' : 'bg-identra-border'}`}></div>
-                <span className="flex-1 text-left">{model.name}</span>
-              </button>
-            ))}
-          </div>
+        <div className="mb-6">
+          <button className="identra-profile w-full justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="identra-avatar" />
+              <div className="identra-profile-text">
+                <span className="identra-profile-name">You</span>
+                <span className="identra-profile-meta">Profile details</span>
+              </div>
+            </div>
+            <ChevronDown className="w-3 h-3 text-identra-text-tertiary" />
+          </button>
         </div>
 
+        <div className="mt-auto">
+          <div className="model-box-label mb-2">Reasoning engine</div>
+          <div
+            className="model-box w-full justify-between"
+            onClick={() => setModelMenuOpen((open) => !open)}
+          >
+            <div className="model-box-value">
+              {currentModel?.name || "Claude 3.5 Sonnet"}
+            </div>
+            <ChevronDown className="w-3 h-3 text-identra-text-tertiary" />
+
+            {modelMenuOpen && (
+              <div className="model-box-menu" onClick={(e) => e.stopPropagation()}>
+                {models.map((model) => (
+                  <button
+                    key={model.id}
+                    className="model-box-item"
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      setModelMenuOpen(false);
+                    }}
+                  >
+                    {model.name}
+                    <span>
+                      {model.id === "claude"
+                        ? "Claude 3.5 Sonnet"
+                        : model.id === "gemini"
+                        ? "Gemini 1.5 Pro"
+                        : "GPT‑4.0 / 4o"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
 
-      {/* Main Content Area - Expanded workspace */}
+      {/* Middle: conversation */}
       <main className="flex-1 flex flex-col min-w-0">
-        
-        {/* Minimal Top Bar */}
-        <header className="h-12 border-b border-identra-border-subtle flex items-center justify-between px-8 bg-identra-bg">
-          <div className="text-[10px] text-identra-text-tertiary tracking-[0.12em] font-semibold">
-            IDENTRA OS
-          </div>
-          <button className="p-1.5 hover:bg-identra-surface-hover transition-colors duration-75 rounded">
-            <MoreVertical className="w-4 h-4 text-identra-text-tertiary" />
-          </button>
-        </header>
 
-        {/* Messages Area - Central workspace dominance */}
-        <div className="flex-1 overflow-y-auto px-12 py-12">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto px-12 py-10">
           <div className="max-w-5xl mx-auto">
             {messages.length === 0 ? (
-              // Empty State - System readiness
               <div className="flex flex-col justify-center h-full pt-32">
                 <h3 className="text-2xl font-semibold text-identra-text-primary mb-2 tracking-tight">
-                  Deep Work Console
+                  Talk to Identra OS
                 </h3>
                 <p className="text-sm text-identra-text-tertiary leading-relaxed max-w-md">
-                  Expands into a distraction-free environment where context is king.
+                  Ask anything about your work, and keep the conversation flowing in a calm, focused space.
                 </p>
               </div>
             ) : (
-              // Messages
               <div className="space-y-8">
                 {messages.map((msg) => (
-                  <div 
-                    key={msg.id} 
-                    className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col gap-1 ${
+                      msg.role === "user" ? "items-end" : "items-start"
+                    }`}
                   >
-                    <div className="max-w-3xl w-full">
-                      <div className={`px-0 py-0 ${
-                        msg.role === 'user' 
-                          ? 'text-identra-text-primary' 
-                          : 'text-identra-text-primary'
-                      }`}>
-                        <p className="text-base leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    <div className="max-w-[60%]">
+                      <div
+                        className={`chat-bubble ${
+                          msg.role === "user"
+                            ? "chat-bubble-user text-identra-text-primary"
+                            : "chat-bubble-assistant text-identra-text-primary"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 text-right">
                         {msg.model && (
                           <span className="text-[9px] text-identra-text-muted uppercase tracking-wider">
-                            {models.find(m => m.id === msg.model)?.name}
+                            {models.find((m) => m.id === msg.model)?.name}
                           </span>
                         )}
                         <span className="text-[9px] text-identra-text-muted">
-                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {msg.timestamp.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
                       </div>
                     </div>
                   </div>
                 ))}
-                
+
                 {isProcessing && (
-                  <div className="flex flex-col gap-1">
-                    <div className="max-w-3xl">
+                  <div className="flex flex-col gap-1 items-start">
+                    <div className="max-w-[60%]">
                       <div className="py-2">
                         <div className="flex gap-1">
                           <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
@@ -237,7 +226,7 @@ export default function ChatInterface() {
           </div>
         </div>
 
-        {/* Input Area - Command interface */}
+        {/* Input Area */}
         <div className="border-t border-identra-border-subtle px-12 py-5 bg-identra-bg">
           <div className="max-w-5xl mx-auto">
             <div className="relative">
@@ -246,7 +235,7 @@ export default function ChatInterface() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type a message to Identra..."
+                  placeholder="Type a message to Identra..."
                 className="w-full bg-identra-surface border border-identra-border focus:border-identra-primary rounded px-4 py-3 text-sm text-identra-text-primary placeholder:text-identra-text-tertiary outline-none transition-all duration-75 focus:bg-identra-surface-elevated"
                 disabled={isProcessing}
               />
@@ -275,14 +264,17 @@ export default function ChatInterface() {
 
       </main>
 
-      {/* Right Context Panel - Control plane */}
-      <aside className={`${contextPanelOpen ? 'w-64' : 'w-0'} transition-all duration-150 bg-identra-surface border-l border-identra-border-subtle overflow-hidden flex flex-col`}>
-        
+      {/* Right: model context on top, recent at bottom */}
+      <aside
+        className={`${
+          contextPanelOpen ? "w-72" : "w-0"
+        } transition-all duration-150 bg-identra-surface border-l border-identra-border-subtle overflow-hidden flex flex-col`}
+      >
         <div className="h-12 flex items-center justify-between px-4 border-b border-identra-border-subtle">
           <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
             Model Context
           </h3>
-          <button 
+          <button
             onClick={() => setContextPanelOpen(false)}
             className="text-identra-text-tertiary hover:text-identra-text-secondary p-1 hover:bg-identra-surface-hover rounded transition-all duration-75"
           >
@@ -292,11 +284,11 @@ export default function ChatInterface() {
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
           {contextDocuments.map((doc) => {
-            const docModel = models.find(m => m.id === doc.model);
+            const docModel = models.find((m) => m.id === doc.model);
             return (
-              <div 
+              <div
                 key={doc.id}
-                className="px-3 py-2.5 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary transition-all duration-75 cursor-pointer group"
+                className="px-3 py-2.5 bg-identra-surface-elevated border border-identra-border hover:border-identra-active transition-all duration-75 cursor-pointer group"
               >
                 <div className="flex items-start gap-2.5 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-identra-active shrink-0 mt-1.5"></div>
@@ -320,6 +312,29 @@ export default function ChatInterface() {
         </div>
 
         <div className="px-4 py-3.5 border-t border-identra-border-subtle">
+          <div className="recent-panel">
+            <div className="recent-panel-header">
+              <span>Recent</span>
+              <Search className="w-3.5 h-3.5 text-identra-text-tertiary" />
+            </div>
+            <div className="mt-1 space-y-1">
+              <div className="recent-item">
+                <div className="recent-item-title">Project Alpha</div>
+                <div className="recent-item-meta">2h ago</div>
+              </div>
+              <div className="recent-item">
+                <div className="recent-item-title">API Integration</div>
+                <div className="recent-item-meta">1d ago</div>
+              </div>
+              <div className="recent-item">
+                <div className="recent-item-title">Q4 Report</div>
+                <div className="recent-item-meta">3d ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 py-3 border-t border-identra-border-subtle">
           <div className="flex items-center justify-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-identra-active"></div>
             <div className="text-[10px] text-identra-text-tertiary text-center tracking-[0.1em] font-semibold">
@@ -327,9 +342,7 @@ export default function ChatInterface() {
             </div>
           </div>
         </div>
-
       </aside>
     </div>
   );
 }
-
