@@ -49,6 +49,7 @@ thiserror = "1"
 
 # Database (encrypted SQLite)
 rusqlite = { version = "0.32", features = ["bundled"] }
+fastembed = "5.8.1"
 # Note: For encryption, use rusqlite with sqlcipher feature: 
 # rusqlite = { version = "0.32", features = ["bundled", "sqlcipher"] }
 # Or use separate sqlcipher crate for production

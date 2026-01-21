@@ -36,3 +36,4 @@ base64 = "0.22"
 # Error Handling
 anyhow = "1"
 thiserror = "1"
+libc = "0.2.180"

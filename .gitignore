@@ -1,12 +1,20 @@
 # --- Dependencies ---
 node_modules/
 .pnpm-store/
+yarn.lock
+package-lock.json
 
 # --- Rust / Cargo ---
 /target/
 **/target/
 **/*.rs.bk
-Cargo.lock # Optional: Keep this if you want reproducible builds (Recommended to KEEP it)
+**/*.pdb
+Cargo.lock # Keep this for reproducible builds
+
+# --- Tauri ---
+clients/ghost-desktop/src-tauri/target/
+clients/ghost-desktop/src-tauri/WixTools/
+clients/ghost-desktop/src-tauri/gen/
 
 # --- Next.js / Web ---
 .next/
@@ -14,9 +22,27 @@ out/
 build/
 dist/
 .vercel/
+clients/ghost-desktop/dist/
 
 # --- Turborepo ---
 .turbo/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+apps/brain-service/.venv/
+apps/brain-service/__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.fastembed_cache/
 
 # --- Environment Variables (Security) ---
 .env
@@ -35,14 +61,29 @@ supabase/.branches/
 infra/docker/db_data/
 postgres-data/
 redis-data/
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+
+# --- Vault / Secrets (Critical Security) ---
+apps/vault-daemon/secrets/
+apps/vault-daemon/keystore/
+*.key
+*.pem
+*.p12
+*.pfx
 
 # --- IDEs / Editors ---
 .vscode/
+!.vscode/settings.json.example
 .idea/
 *.swp
 *.swo
 .DS_Store
 Thumbs.db
+*~
 
 # --- Logs ---
 npm-debug.log*
@@ -50,7 +91,48 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
+logs/
+*.log.*
 
 # --- Testing / Coverage ---
 coverage/
 .nyc_output/
+htmlcov/
+.coverage
+.tox/
+
+# --- Build Artifacts ---
+*.exe
+*.dll
+*.so
+*.dylib
+apps/tunnel-gateway/tunnel-gateway
+apps/vault-daemon/vault-daemon
+clients/ghost-desktop/src-tauri/ghost-desktop
+
+# --- Temporary Files ---
+*.tmp
+*.temp
+*.swp
+*.bak
+tmp/
+temp/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Profiling / Benchmarks ---
+flamegraph.svg
+perf.data
+perf.data.old
+criterion/
+
+# --- AWS / Cloud ---
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraformrc
+terraform.tfvars
