@@ -9,7 +9,6 @@ package-lock.json
 **/target/
 **/*.rs.bk
 **/*.pdb
-Cargo.lock # Keep this for reproducible builds
 
 # --- Tauri ---
 clients/ghost-desktop/src-tauri/target/
