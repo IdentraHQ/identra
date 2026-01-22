@@ -30,6 +30,8 @@ html {
   width: 100vw;
   height: 100vh;
   background: transparent !important;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Custom scrollbar styling */
@@ -63,4 +65,98 @@ input:-webkit-autofill:focus {
 .select-none {
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* Professional layout enhancements */
+.three-column-layout {
+  display: grid;
+  grid-template-columns: 256px 1fr 288px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Smooth transitions for expandable elements */
+.reasoning-engine-dropdown {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Message bubble styling */
+.message-bubble {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure proper alignment for chat messages */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+/* Professional spacing and alignment */
+.section-divider {
+  border-color: #17171c;
+  border-width: 1px;
+}
+
+/* Box styling for recent chats */
+.recent-chat-box {
+  background: #14141a;
+  border: 1px solid #1f1f24;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.recent-chat-box:hover {
+  border-color: #52525b;
+  background: #18181d;
+}
+
+/* Textarea resizing and styling */
+textarea {
+  resize: both;
+  overflow: auto;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+textarea::-webkit-resizer {
+  background-color: #52525b;
+  border-radius: 0 0 0.5rem 0;
+}
+
+/* Ensure textarea shows all text */
+textarea:focus {
+  outline: none;
+}
+
+/* Custom scrollbar for textarea */
+textarea::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }

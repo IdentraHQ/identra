@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { 
   Send, 
-  Clock,
   Search,
-  MoreVertical,
-  Circle,
   FileText,
   ChevronDown,
-  Sparkles
+  ChevronUp,
+  User
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -16,12 +14,12 @@ export default function ChatInterface() {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [contextPanelOpen, setContextPanelOpen] = useState(true);
   const [selectedModel, setSelectedModel] = useState("claude"); // claude, gemini, gpt
   const [sessionInitialized, setSessionInitialized] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
+  const [reasoningEngineOpen, setReasoningEngineOpen] = useState(false);
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const models = [
     { id: "claude", name: "Claude 3.5 Sonnet", color: "identra-claude", icon: "⚡" },
@@ -124,6 +122,20 @@ export default function ChatInterface() {
     }
   };
 
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to auto to get the correct scrollHeight
+      textareaRef.current.style.height = 'auto';
+      // Set height to scrollHeight, but respect min and max
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const minHeight = 80; // min-h-[80px]
+      const maxHeight = 400; // max-h-[400px]
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [input]);
+
   const handleLoadConversation = async (item) => {
     try {
       console.log("🔄 Loading conversation:", item.id);
@@ -167,20 +179,213 @@ export default function ChatInterface() {
   return (
     <div className="flex h-screen bg-identra-bg text-identra-text-primary font-sans antialiased">
       
-      {/* Left Sidebar - Compressed visual weight */}
-      <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} transition-all duration-150 bg-identra-surface border-r border-identra-border-subtle overflow-hidden flex flex-col`}>
-        
-        {/* Recent Section */}
-        <div className="flex-1 overflow-y-auto px-3 py-6">
-          <div className="flex items-center justify-between px-2 mb-4">
+      {/* Left Section - Branding and User Profile */}
+      <aside className="w-64 bg-identra-surface border-r border-identra-border-subtle flex flex-col">
+        {/* IDENTRA Branding */}
+        <div className="px-6 py-8 border-b border-identra-border-subtle">
+          <h1 className="text-4xl font-bold text-identra-text-primary tracking-tight mb-2">
+            IDENTRA
+          </h1>
+        </div>
+
+        {/* User Profile and Pack Name */}
+        <div className="px-6 py-6 border-b border-identra-border-subtle">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-identra-surface-elevated border border-identra-border flex items-center justify-center">
+              <User className="w-6 h-6 text-identra-text-secondary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-identra-text-primary">User Profile</p>
+              <p className="text-xs text-identra-text-tertiary mt-0.5">Active Session</p>
+            </div>
+          </div>
+          <div className="px-3 py-2 bg-identra-surface-elevated border border-identra-border rounded">
+            <p className="text-[10px] text-identra-text-tertiary uppercase tracking-wider mb-1">Pack</p>
+            <p className="text-sm text-identra-text-primary font-medium">Standard Pack</p>
+          </div>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1"></div>
+      </aside>
+
+      {/* Middle Section - Chat Conversation */}
+      <main className="flex-1 flex flex-col min-w-0 border-r border-identra-border-subtle">
+        {/* Reasoning Engine - At top of chat section */}
+        <div className="px-8 py-4 border-b border-identra-border-subtle bg-identra-surface">
+          <button
+            onClick={() => setReasoningEngineOpen(!reasoningEngineOpen)}
+            className="w-full max-w-md flex items-center justify-between px-4 py-2.5 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary transition-all duration-75 rounded"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
+                Reasoning Engine
+              </span>
+              <span className="text-sm text-identra-text-primary font-medium">
+                {currentModel.name}
+              </span>
+            </div>
+            {reasoningEngineOpen ? (
+              <ChevronUp className="w-4 h-4 text-identra-text-tertiary" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-identra-text-tertiary" />
+            )}
+          </button>
+          
+          {reasoningEngineOpen && (
+            <div className="mt-3 max-w-md space-y-1 bg-identra-surface-elevated border border-identra-border rounded p-2">
+              {models.map((model) => (
+                <button
+                  key={model.id}
+                  onClick={() => {
+                    setSelectedModel(model.id);
+                    setReasoningEngineOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-all duration-75 rounded ${
+                    selectedModel === model.id
+                      ? 'bg-identra-surface text-identra-text-primary border border-identra-primary font-medium'
+                      : 'text-identra-text-tertiary hover:bg-identra-surface-hover hover:text-identra-text-secondary font-normal'
+                  }`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${selectedModel === model.id ? 'bg-identra-active' : 'bg-identra-border'}`}></div>
+                  <span className="flex-1 text-left">{model.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Messages Area - Split Layout */}
+        <div className="flex-1 overflow-y-auto px-8 py-8">
+          {messages.length === 0 ? (
+            <div className="flex flex-col justify-center h-full items-center">
+              <h3 className="text-2xl font-semibold text-identra-text-primary mb-2 tracking-tight">
+                Deep Work Console
+              </h3>
+              <p className="text-sm text-identra-text-tertiary leading-relaxed max-w-md text-center">
+                Expands into a distraction-free environment where context is king.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6 max-w-full">
+              {messages.map((msg) => (
+                <div 
+                  key={msg.id} 
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`${msg.role === 'user' ? 'w-[60%]' : 'w-[60%]'} flex flex-col gap-2`}>
+                    <div className={`px-4 py-3 rounded-lg ${
+                      msg.role === 'user' 
+                        ? 'bg-identra-surface-elevated border border-identra-border text-identra-text-primary ml-auto' 
+                        : 'bg-identra-surface border border-identra-border-subtle text-identra-text-primary mr-auto'
+                    }`}>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                    <div className={`flex items-center gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      {msg.model && (
+                        <span className="text-[9px] text-identra-text-muted uppercase tracking-wider">
+                          {models.find(m => m.id === msg.model)?.name}
+                        </span>
+                      )}
+                      <span className="text-[9px] text-identra-text-muted">
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {isProcessing && (
+                <div className="flex justify-start">
+                  <div className="w-[60%] flex flex-col gap-2">
+                    <div className="px-4 py-3 bg-identra-surface border border-identra-border-subtle rounded-lg mr-auto">
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse"></span>
+                        <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
+                        <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t border-identra-border-subtle px-8 py-6 bg-identra-bg">
+          <div className="relative max-w-5xl mx-auto">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Type a message to Identra..."
+              className="w-full bg-identra-surface border border-identra-border focus:border-identra-primary rounded-lg px-4 py-4 pr-12 text-sm text-identra-text-primary placeholder:text-identra-text-tertiary outline-none transition-all duration-75 focus:bg-identra-surface-elevated resize overflow-y-auto"
+              disabled={isProcessing}
+              style={{ minHeight: '80px', maxHeight: '400px', resize: 'both' }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isProcessing}
+              className="absolute right-3 bottom-3 p-2.5 text-identra-text-tertiary hover:text-identra-text-primary disabled:text-identra-text-disabled hover:bg-identra-surface-hover rounded transition-all duration-75"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </main>
+
+      {/* Right Section - Model Context and Recent Chats */}
+      <aside className="w-72 bg-identra-surface border-l border-identra-border-subtle flex flex-col">
+        {/* Model Context and Audits */}
+        <div className="px-4 py-5 border-b border-identra-border-subtle">
+          <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em] mb-4">
+            Model Context
+          </h3>
+          <div className="space-y-2.5">
+            {contextDocuments.map((doc) => {
+              const docModel = models.find(m => m.id === doc.model);
+              return (
+                <div 
+                  key={doc.id}
+                  className="px-3 py-2.5 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary transition-all duration-75 cursor-pointer group rounded"
+                >
+                  <div className="flex items-start gap-2.5 mb-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-identra-active shrink-0 mt-1.5"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-identra-text-primary font-medium truncate group-hover:text-identra-text-primary">
+                        {doc.name}
+                      </p>
+                      <p className="text-[10px] text-identra-text-muted mt-1">
+                        {doc.size}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-identra-border-subtle pt-2 mt-2">
+                    <span className="text-[10px] text-identra-text-tertiary uppercase tracking-wider font-medium">
+                      {docModel.name}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+
+        {/* Recent Chats */}
+        <div className="flex-1 overflow-y-auto px-4 py-5">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
-              Recent
+              Recent Chats
             </h3>
             <Search className="w-3.5 h-3.5 text-identra-text-tertiary" />
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-2">
             {conversationHistory.length === 0 ? (
-              <div className="px-2.5 py-4 text-center">
+              <div className="px-3 py-6 text-center bg-identra-surface-elevated border border-identra-border rounded">
                 <p className="text-[10px] text-identra-text-muted">No conversations yet</p>
               </div>
             ) : (
@@ -191,18 +396,17 @@ export default function ChatInterface() {
                                timeAgo < 1440 ? `${Math.floor(timeAgo / 60)}h ago` : 
                                `${Math.floor(timeAgo / 1440)}d ago`;
                 
-                // Show first 30 chars of content as title
-                const title = item.content.substring(0, 30) + (item.content.length > 30 ? '...' : '');
+                const title = item.content.substring(0, 40) + (item.content.length > 40 ? '...' : '');
                 
                 return (
                   <div 
                     key={item.id} 
                     onClick={() => handleLoadConversation(item)}
-                    className="px-2.5 py-2.5 hover:bg-identra-surface-hover cursor-pointer transition-all duration-75 group border-l-2 border-transparent hover:border-identra-primary"
+                    className="px-3 py-3 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary cursor-pointer transition-all duration-75 group rounded"
                   >
-                    <div className="flex items-center gap-2.5 mb-1">
+                    <div className="flex items-center gap-2.5 mb-2">
                       <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                      <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-1">
+                      <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-2 flex-1">
                         {title}
                       </p>
                     </div>
@@ -214,189 +418,8 @@ export default function ChatInterface() {
           </div>
         </div>
 
-        {/* Reasoning Engine - Infrastructure configuration */}
-        <div className="px-3 py-5 border-t border-identra-border-subtle">
-          <div className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em] px-2 mb-3.5">
-            Reasoning Engine
-          </div>
-          <div className="space-y-1">
-            {models.map((model) => (
-              <button
-                key={model.id}
-                onClick={() => setSelectedModel(model.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-xs transition-all duration-75 border-l-2 ${
-                  selectedModel === model.id
-                    ? 'bg-identra-surface-elevated text-identra-text-primary border-identra-primary font-medium'
-                    : 'text-identra-text-tertiary hover:bg-identra-surface-hover hover:text-identra-text-secondary border-transparent font-normal'
-                }`}
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${selectedModel === model.id ? 'bg-identra-active' : 'bg-identra-border'}`}></div>
-                <span className="flex-1 text-left">{model.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-      </aside>
-
-      {/* Main Content Area - Expanded workspace */}
-      <main className="flex-1 flex flex-col min-w-0">
-        
-        {/* Minimal Top Bar */}
-        <header className="h-12 border-b border-identra-border-subtle flex items-center justify-between px-8 bg-identra-bg">
-          <div className="text-[10px] text-identra-text-tertiary tracking-[0.12em] font-semibold">
-            IDENTRA OS
-          </div>
-          <button className="p-1.5 hover:bg-identra-surface-hover transition-colors duration-75 rounded">
-            <MoreVertical className="w-4 h-4 text-identra-text-tertiary" />
-          </button>
-        </header>
-
-        {/* Messages Area - Central workspace dominance */}
-        <div className="flex-1 overflow-y-auto px-12 py-12">
-          <div className="max-w-5xl mx-auto">
-            {messages.length === 0 ? (
-              // Empty State - System readiness
-              <div className="flex flex-col justify-center h-full pt-32">
-                <h3 className="text-2xl font-semibold text-identra-text-primary mb-2 tracking-tight">
-                  Deep Work Console
-                </h3>
-                <p className="text-sm text-identra-text-tertiary leading-relaxed max-w-md">
-                  Expands into a distraction-free environment where context is king.
-                </p>
-              </div>
-            ) : (
-              // Messages
-              <div className="space-y-8">
-                {messages.map((msg) => (
-                  <div 
-                    key={msg.id} 
-                    className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                  >
-                    <div className="max-w-3xl w-full">
-                      <div className={`px-0 py-0 ${
-                        msg.role === 'user' 
-                          ? 'text-identra-text-primary' 
-                          : 'text-identra-text-primary'
-                      }`}>
-                        <p className="text-base leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        {msg.model && (
-                          <span className="text-[9px] text-identra-text-muted uppercase tracking-wider">
-                            {models.find(m => m.id === msg.model)?.name}
-                          </span>
-                        )}
-                        <span className="text-[9px] text-identra-text-muted">
-                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {isProcessing && (
-                  <div className="flex flex-col gap-1">
-                    <div className="max-w-3xl">
-                      <div className="py-2">
-                        <div className="flex gap-1">
-                          <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
-                          <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
-                          <span className="w-1 h-1 bg-identra-text-muted rounded-full"></span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Input Area - Command interface */}
-        <div className="border-t border-identra-border-subtle px-12 py-5 bg-identra-bg">
-          <div className="max-w-5xl mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type a message to Identra..."
-                className="w-full bg-identra-surface border border-identra-border focus:border-identra-primary rounded px-4 py-3 text-sm text-identra-text-primary placeholder:text-identra-text-tertiary outline-none transition-all duration-75 focus:bg-identra-surface-elevated"
-                disabled={isProcessing}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isProcessing}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-identra-text-tertiary hover:text-identra-text-primary disabled:text-identra-text-disabled hover:bg-identra-surface-hover rounded transition-all duration-75"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Status Bar */}
-        <div className="h-7 border-t border-identra-border-subtle flex items-center justify-center bg-identra-surface">
-          <div className="flex items-center gap-2.5 text-[10px] text-identra-text-tertiary tracking-[0.1em] font-semibold">
-            <span>IDENTRA OS V1.0</span>
-            <span className="text-identra-text-muted">•</span>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-identra-active"></div>
-              <span>SECURE ENCLAVE ACTIVE</span>
-            </div>
-          </div>
-        </div>
-
-      </main>
-
-      {/* Right Context Panel - Control plane */}
-      <aside className={`${contextPanelOpen ? 'w-64' : 'w-0'} transition-all duration-150 bg-identra-surface border-l border-identra-border-subtle overflow-hidden flex flex-col`}>
-        
-        <div className="h-12 flex items-center justify-between px-4 border-b border-identra-border-subtle">
-          <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
-            Model Context
-          </h3>
-          <button 
-            onClick={() => setContextPanelOpen(false)}
-            className="text-identra-text-tertiary hover:text-identra-text-secondary p-1 hover:bg-identra-surface-hover rounded transition-all duration-75"
-          >
-            <ChevronDown className="w-3.5 h-3.5 rotate-90" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-          {contextDocuments.map((doc) => {
-            const docModel = models.find(m => m.id === doc.model);
-            return (
-              <div 
-                key={doc.id}
-                className="px-3 py-2.5 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary transition-all duration-75 cursor-pointer group"
-              >
-                <div className="flex items-start gap-2.5 mb-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-identra-active shrink-0 mt-1.5"></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-identra-text-primary font-medium truncate group-hover:text-identra-text-primary">
-                      {doc.name}
-                    </p>
-                    <p className="text-[10px] text-identra-text-muted mt-1">
-                      {doc.size}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between border-t border-identra-border-subtle pt-2 mt-2">
-                  <span className="text-[10px] text-identra-text-tertiary uppercase tracking-wider font-medium">
-                    {docModel.name}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="px-4 py-3.5 border-t border-identra-border-subtle">
+        {/* Footer Status */}
+        <div className="px-4 py-3 border-t border-identra-border-subtle">
           <div className="flex items-center justify-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-identra-active"></div>
             <div className="text-[10px] text-identra-text-tertiary text-center tracking-[0.1em] font-semibold">
@@ -404,7 +427,6 @@ export default function ChatInterface() {
             </div>
           </div>
         </div>
-
       </aside>
     </div>
   );
