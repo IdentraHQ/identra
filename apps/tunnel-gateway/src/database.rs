@@ -1,5 +1,5 @@
 use sqlx::postgres::{PgPoolOptions, PgPool};
-use sqlx::{Row};
+use sqlx::Row; 
 use uuid::Uuid;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -77,6 +77,25 @@ impl MemoryDatabase {
         )
         .bind(embedding)
         .bind(threshold)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        self.map_rows(rows)
+    }
+
+    // NEW: Fetch recent memories sorted by time
+    pub async fn get_recent_memories(&self, limit: i32) -> Result<Vec<MemoryModel>, sqlx::Error> {
+        let limit = if limit <= 0 { 50 } else { limit };
+        
+        let rows = sqlx::query(
+            r#"
+            SELECT id, content, metadata, tags, created_at, updated_at 
+            FROM memories 
+            ORDER BY created_at DESC 
+            LIMIT $1
+            "#
+        )
         .bind(limit)
         .fetch_all(&self.pool)
         .await?;

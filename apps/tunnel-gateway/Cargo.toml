@@ -31,10 +31,8 @@ anyhow = "1"
 thiserror = "1"
 
 # --- FIXED DEPENDENCIES ---
-# Upgraded to v4 to support ort v2
-fastembed = "4" 
-# REMOVED explicit 'ort' dependency to prevent version conflicts.
-# fastembed v4 will automatically pull in the correct compatible version of ort.
+# Upgraded to v5 to match ghost-desktop
+fastembed = "5" 
 
 sqlx = { version = "0.7", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "json"] }
 dotenvy = "0.15"
