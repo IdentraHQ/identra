@@ -6,6 +6,7 @@ use identra_proto::memory::{
     GetMemoryRequest, GetMemoryResponse,
     DeleteMemoryRequest, DeleteMemoryResponse,
     SearchMemoriesRequest, SearchMemoriesResponse,
+    GetRecentMemoriesRequest, GetRecentMemoriesResponse,
 };
 use crate::database::MemoryDatabase;
 use std::sync::{Arc, Mutex};
@@ -35,7 +36,6 @@ impl MemoryServiceImpl {
     pub fn new(db: Arc<MemoryDatabase>) -> Self {
         tracing::info!("🧠 Initializing Neural Engine...");
         
-        // FIX: Use the Builder Pattern for fastembed v4+
         let options = InitOptions::new(EmbeddingModel::AllMiniLML6V2)
             .with_show_download_progress(true);
 
@@ -54,10 +54,10 @@ impl MemoryServiceImpl {
     
     fn generate_embedding(&self, content: &str) -> Result<Vec<f32>, Status> {
         let documents = vec![content.to_string()];
-        let  embedder = self.embedder.lock()
+        // FIX: Added 'mut' here because fastembed v5 requires mutable access
+        let mut embedder = self.embedder.lock()
             .map_err(|_| Status::internal("AI Engine lock failure"))?;
         
-        // fastembed v4 returns a generic Result, map it to Status
         let embeddings = embedder.embed(documents, None)
             .map_err(|e| Status::internal(format!("Embedding failed: {}", e)))?;
         
@@ -117,10 +117,7 @@ impl MemoryService for MemoryServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
             
         let memories: Vec<Memory> = results.into_iter().map(|m| Memory {
-            id: m.id,
-            content: m.content,
-            metadata: m.metadata,
-            embedding: vec![],
+            id: m.id, content: m.content, metadata: m.metadata, embedding: vec![],
             created_at: Some(prost_types::Timestamp { seconds: m.created_at, nanos: 0 }),
             updated_at: Some(prost_types::Timestamp { seconds: m.updated_at, nanos: 0 }),
             tags: m.tags,
@@ -153,5 +150,25 @@ impl MemoryService for MemoryServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
             
         Ok(Response::new(DeleteMemoryResponse { success, message: if success { "Deleted".into() } else { "Not found".into() } }))
+    }
+
+    async fn get_recent_memories(&self, req: Request<GetRecentMemoriesRequest>) -> Result<Response<GetRecentMemoriesResponse>, Status> {
+        let r = req.into_inner();
+        
+        let results = self.db.get_recent_memories(r.limit)
+            .await
+            .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+
+        let memories: Vec<Memory> = results.into_iter().map(|m| Memory {
+            id: m.id,
+            content: m.content,
+            metadata: m.metadata,
+            embedding: vec![], 
+            created_at: Some(prost_types::Timestamp { seconds: m.created_at, nanos: 0 }),
+            updated_at: Some(prost_types::Timestamp { seconds: m.updated_at, nanos: 0 }),
+            tags: m.tags,
+        }).collect();
+        
+        Ok(Response::new(GetRecentMemoriesResponse { memories }))
     }
 }

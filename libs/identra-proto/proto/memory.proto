@@ -1,35 +1,32 @@
 syntax = "proto3";
-
-package identra.memory.v1;
+package identra.memory.v1; // <--- FIXED: Reverted to correct package name
 
 import "google/protobuf/timestamp.proto";
 
-// Memory service for storing and retrieving AI context/memories
 service MemoryService {
-  // Store a memory/context
-  rpc StoreMemory(StoreMemoryRequest) returns (StoreMemoryResponse);
+  rpc StoreMemory (StoreMemoryRequest) returns (StoreMemoryResponse);
+  rpc QueryMemories (QueryMemoriesRequest) returns (QueryMemoriesResponse);
+  rpc GetMemory (GetMemoryRequest) returns (GetMemoryResponse);
+  rpc DeleteMemory (DeleteMemoryRequest) returns (DeleteMemoryResponse);
+  rpc SearchMemories (SearchMemoriesRequest) returns (SearchMemoriesResponse);
   
-  // Retrieve memories by query
-  rpc QueryMemories(QueryMemoriesRequest) returns (QueryMemoriesResponse);
-  
-  // Retrieve a specific memory by ID
-  rpc GetMemory(GetMemoryRequest) returns (GetMemoryResponse);
-  
-  // Delete a memory
-  rpc DeleteMemory(DeleteMemoryRequest) returns (DeleteMemoryResponse);
-  
-  // Search memories with vector similarity
-  rpc SearchMemories(SearchMemoriesRequest) returns (SearchMemoriesResponse);
+  // NEW: Fetch recent chat history
+  rpc GetRecentMemories (GetRecentMemoriesRequest) returns (GetRecentMemoriesResponse);
 }
 
 message Memory {
   string id = 1;
   string content = 2;
   map<string, string> metadata = 3;
-  repeated float embedding = 4; // Vector embedding
+  repeated float embedding = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
   repeated string tags = 7;
+}
+
+message MemoryMatch {
+  Memory memory = 1;
+  float similarity_score = 2;
 }
 
 message StoreMemoryRequest {
@@ -76,13 +73,18 @@ message SearchMemoriesRequest {
   repeated float query_embedding = 1;
   int32 limit = 2;
   float similarity_threshold = 3;
+  map<string, string> filters = 4;
 }
 
 message SearchMemoriesResponse {
   repeated MemoryMatch matches = 1;
 }
 
-message MemoryMatch {
-  Memory memory = 1;
-  float similarity_score = 2;
+// NEW MESSAGES
+message GetRecentMemoriesRequest {
+  int32 limit = 1;
+}
+
+message GetRecentMemoriesResponse {
+  repeated Memory memories = 1;
 }

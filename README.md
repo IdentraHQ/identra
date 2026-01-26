@@ -4,6 +4,30 @@ Identra is a confidential operating system layer designed to act as a unified **
 
 The system functions as a **Fortified Library** between the User and External AI, utilizing local-first vectorization, encrypted storage, and secure compute enclaves.
 
+## 🚀 Quick Start - Chat Interface
+
+The desktop app now includes a fully functional AI chat interface with support for **Claude, GPT-4, and Gemini**!
+
+### Setup in 3 Steps:
+
+1. **Configure your settings**:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your API keys (or leave empty for demo mode)
+   ```
+
+2. **Start the services**:
+   ```bash
+   just dev-all  # Starts desktop app + gateway + database
+   ```
+
+3. **Start chatting!** 🎉
+   - Type a message in the chat interface
+   - Switch models using the "Reasoning Engine" dropdown
+   - All conversations are encrypted and stored locally
+
+📖 **Full Guide**: See [CHAT_SETUP.md](CHAT_SETUP.md) for detailed setup instructions and troubleshooting.
+
 ---
 
 ## Architecture Overview

@@ -13,7 +13,6 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [status, setStatus] = useState(null);
   const [selectedModel, setSelectedModel] = useState("claude"); // claude, gemini, gpt
   const [sessionInitialized, setSessionInitialized] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
@@ -50,10 +49,6 @@ export default function ChatInterface() {
   }, []);
 
   useEffect(() => {
-    invoke("get_system_status")
-      .then(setStatus)
-      .catch(err => console.error("Failed to get status:", err));
-    
     // Load conversation history after session initialized
     if (sessionInitialized) {
       invoke("query_history", { limit: 50 })
@@ -63,7 +58,7 @@ export default function ChatInterface() {
         })
         .catch(err => console.error("Failed to load history:", err));
     }
-  }, [sessionInitialized]); // Re-fetch status after session init
+  }, [sessionInitialized]); // Re-fetch after session init
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -90,17 +85,38 @@ export default function ChatInterface() {
     setIsProcessing(true);
 
     try {
-      const response = await invoke("vault_memory", { content: input });
+      // Prepare conversation history for API
+      // Note: Context limit is configured in .env (CHAT_CONTEXT_LIMIT, default: 10)
+      const historyForAPI = messages.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: Math.floor(msg.timestamp.getTime() / 1000)
+      }));
+
+      // Call the new chat_with_ai command
+      const response = await invoke("chat_with_ai", {
+        message: input,
+        model: selectedModel,
+        conversationHistory: historyForAPI
+      });
       
       const assistantMessage = {
         id: Date.now() + 1,
         role: "assistant",
-        content: response,
+        content: response.message,
         timestamp: new Date(),
         model: selectedModel
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Refresh history to show the new conversation
+      invoke("query_history", { limit: 50 })
+        .then(history => {
+          setConversationHistory(history);
+        })
+        .catch(err => console.error("Failed to refresh history:", err));
+        
     } catch (err) {
       console.error("Error:", err);
       const errorMessage = {
@@ -146,17 +162,48 @@ export default function ChatInterface() {
       
       console.log("🔓 Decrypted content:", decryptedContent);
       
-      // Load as a single message for now (in reality, you'd parse conversation history)
-      const loadedMessage = {
-        id: item.id,
-        role: "user",
-        content: decryptedContent,
-        timestamp: new Date(item.timestamp * 1000)
-      };
-      
-      setMessages([loadedMessage]);
-      
-      console.log("✅ Loaded and decrypted conversation:", item.id, loadedMessage);
+      // Parse the conversation JSON
+      try {
+        const conversation = JSON.parse(decryptedContent);
+        
+        // Load both user message and AI response
+        const loadedMessages = [];
+        
+        if (conversation.user) {
+          loadedMessages.push({
+            id: `${item.id}-user`,
+            role: "user",
+            content: conversation.user,
+            timestamp: new Date(conversation.timestamp || item.timestamp * 1000)
+          });
+        }
+        
+        if (conversation.assistant) {
+          loadedMessages.push({
+            id: `${item.id}-assistant`,
+            role: "assistant",
+            content: conversation.assistant,
+            timestamp: new Date(conversation.timestamp || item.timestamp * 1000),
+            model: conversation.model || selectedModel
+          });
+        }
+        
+        setMessages(loadedMessages);
+        
+        console.log("✅ Loaded conversation with", loadedMessages.length, "messages");
+      } catch (error_) {
+        console.warn("Not JSON format, treating as legacy:", error_.message);
+        // If it's not JSON, treat it as a single user message (legacy format)
+        const loadedMessage = {
+          id: item.id,
+          role: "user",
+          content: decryptedContent,
+          timestamp: new Date(item.timestamp * 1000)
+        };
+        
+        setMessages([loadedMessage]);
+        console.log("✅ Loaded legacy conversation:", item.id);
+      }
       
       // Scroll to view
       setTimeout(() => {
@@ -273,7 +320,7 @@ export default function ChatInterface() {
                   key={msg.id} 
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`${msg.role === 'user' ? 'w-[60%]' : 'w-[60%]'} flex flex-col gap-2`}>
+                  <div className="w-[60%] flex flex-col gap-2">
                     <div className={`px-4 py-3 rounded-lg ${
                       msg.role === 'user' 
                         ? 'bg-identra-surface-elevated border border-identra-border text-identra-text-primary ml-auto' 
@@ -392,17 +439,23 @@ export default function ChatInterface() {
               conversationHistory.map((item) => {
                 const timestamp = new Date(item.timestamp * 1000);
                 const timeAgo = Math.floor((Date.now() - timestamp) / 1000 / 60);
-                const timeStr = timeAgo < 60 ? `${timeAgo}m ago` : 
-                               timeAgo < 1440 ? `${Math.floor(timeAgo / 60)}h ago` : 
-                               `${Math.floor(timeAgo / 1440)}d ago`;
+                let timeStr;
+                if (timeAgo < 60) {
+                  timeStr = `${timeAgo}m ago`;
+                } else if (timeAgo < 1440) {
+                  timeStr = `${Math.floor(timeAgo / 60)}h ago`;
+                } else {
+                  timeStr = `${Math.floor(timeAgo / 1440)}d ago`;
+                }
                 
-                const title = item.content.substring(0, 40) + (item.content.length > 40 ? '...' : '');
+                // Try to parse and show user message as preview
+                let title = "Conversation";
                 
                 return (
-                  <div 
+                  <button
                     key={item.id} 
                     onClick={() => handleLoadConversation(item)}
-                    className="px-3 py-3 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary cursor-pointer transition-all duration-75 group rounded"
+                    className="w-full px-3 py-3 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary cursor-pointer transition-all duration-75 group rounded text-left"
                   >
                     <div className="flex items-center gap-2.5 mb-2">
                       <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
@@ -411,7 +464,7 @@ export default function ChatInterface() {
                       </p>
                     </div>
                     <p className="text-[10px] text-identra-text-muted pl-6">{timeStr}</p>
-                  </div>
+                  </button>
                 );
               })
             )}
