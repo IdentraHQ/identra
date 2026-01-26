@@ -18,7 +18,10 @@ pub struct GrpcClient {
 impl GrpcClient {
     pub async fn connect() -> Result<Self, Box<dyn std::error::Error>> {
         // Connect to the Gateway
-        let channel = Channel::from_static("http://[::1]:50051")
+        let gateway_addr = std::env::var("GATEWAY_ADDRESS")
+            .unwrap_or_else(|_| "http://[::1]:50051".to_string());
+        
+        let channel = Channel::from_shared(gateway_addr)?
             .connect()
             .await?;
         

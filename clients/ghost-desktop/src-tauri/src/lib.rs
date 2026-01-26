@@ -5,6 +5,9 @@ pub mod state;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load environment variables from .env file
+    let _ = dotenvy::dotenv();
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
@@ -28,7 +31,8 @@ pub fn run() {
             commands::decrypt_memory,   // Retrieve (Secrets)
             commands::query_history,    // Query (Legacy/Search)
             commands::semantic_search,  // Vector Search
-            commands::fetch_history,    // Recent History (NEW)
+            commands::fetch_history,    // Recent History
+            commands::chat_with_ai,     // AI Chat (NEW)
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
