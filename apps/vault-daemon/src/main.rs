@@ -1,5 +1,10 @@
 use anyhow::Result;
-use vault_daemon::VaultServer;
+use tonic::transport::Server;
+use std::net::SocketAddr;
+
+// Import gRPC service
+use identra_proto::memory::memory_service_server::MemoryServiceServer;
+use vault_daemon::grpc_service::MemoryServiceImpl;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -7,15 +12,22 @@ async fn main() -> Result<()> {
     println!("📍 Local secure storage initialized");
     println!("🔑 OS Keychain integration active");
     
-    // Initialize IPC server
-    let server = VaultServer::new();
+    // Initialize gRPC Memory Service
+    let memory_service = MemoryServiceImpl::new()
+        .map_err(|e| anyhow::anyhow!("Failed to initialize memory service: {}", e))?;
     
-    // Start listening for IPC connections
-    // This will block until shutdown signal
+    // gRPC server address
+    let addr: SocketAddr = "127.0.0.1:50051".parse()?;
+    println!("🚀 gRPC server starting on {}", addr);
+    
+    // Start gRPC server
     tokio::select! {
-        result = server.start() => {
+        result = Server::builder()
+            .add_service(MemoryServiceServer::new(memory_service))
+            .serve(addr) => {
             if let Err(e) = result {
-                eprintln!("❌ Server error: {}", e);
+                eprintln!("❌ gRPC Server error: {}", e);
+                return Err(e.into());
             }
         }
         _ = tokio::signal::ctrl_c() => {

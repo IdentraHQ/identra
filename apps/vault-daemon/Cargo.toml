@@ -11,6 +11,15 @@ path = "src/main.rs"
 # Shared Libraries
 identra-core = { path = "../../libs/identra-core" }
 identra-crypto = { path = "../../libs/identra-crypto" }
+identra-proto = { path = "../../libs/identra-proto" }
+
+# gRPC Server
+tonic = "0.12"
+prost = "0.12"
+prost-types = "0.12"
+
+# UUID Generation  
+uuid = { version = "1.0", features = ["v4"] }
 
 # Security & Cryptography
 keyring = "2"           # Cross-platform OS keychain

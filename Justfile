@@ -24,7 +24,7 @@ dev-vault:
 # Run the Brain Service (Python FastAPI + RAG) - Sailesh
 dev-brain:
     @echo "Starting Brain Service..."
-    cd apps/brain-service && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && python main.py
+    cd apps/brain-service && bash -c "source .venv/bin/activate && python main.py"
 
 # Run all backend services in parallel (Gateway + Vault + Brain)
 dev-backend:

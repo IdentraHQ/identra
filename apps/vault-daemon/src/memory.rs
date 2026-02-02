@@ -1,5 +1,4 @@
 use crate::error::Result;
-use region::{Protection, protect};
 use secrecy::Secret;
 use zeroize::Zeroize;
 

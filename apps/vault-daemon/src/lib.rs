@@ -7,6 +7,9 @@ pub mod memory;
 // IPC communication module
 pub mod ipc;
 
+// gRPC service module
+pub mod grpc_service;
+
 // Error types
 mod error;
 

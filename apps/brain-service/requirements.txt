@@ -1,1 +1,19 @@
+# FastAPI and web server
 fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# gRPC for communication with vault-daemon (using identra-proto)
+grpcio
+grpcio-tools
+protobuf
+
+# AI/ML dependencies for RAG
+# numpy
+# sentence-transformers  # For embeddings
+# transformers          # For local LLM inference (if needed)
+
+# Utilities
+python-dotenv          # For environment variables
+structlog             # Better logging

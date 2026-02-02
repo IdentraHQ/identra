@@ -131,7 +131,53 @@ pub struct MacOSKeyStorage;
 
 /// Linux implementation (placeholder for future)
 #[cfg(target_os = "linux")]
-pub struct LinuxKeyStorage;
+pub struct LinuxKeyStorage {
+    service_name: String,
+    // In-memory storage for MVP (production should use Secret Service API)
+    storage: std::sync::Arc<std::sync::Mutex<HashMap<String, (Vec<u8>, KeyMetadata)>>>,
+}
+
+#[cfg(target_os = "linux")]
+impl LinuxKeyStorage {
+    pub fn new(service: &str) -> Self {
+        Self {
+            service_name: service.to_string(),
+            storage: std::sync::Arc::new(std::sync::Mutex::new(HashMap::new())),
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl KeyStorage for LinuxKeyStorage {
+    fn store_key(&self, key_id: &str, key: &[u8], metadata: KeyMetadata) -> Result<()> {
+        let mut storage = self.storage.lock().unwrap();
+        storage.insert(key_id.to_string(), (key.to_vec(), metadata));
+        Ok(())
+    }
+
+    fn retrieve_key(&self, key_id: &str) -> Result<(Vec<u8>, KeyMetadata)> {
+        let storage = self.storage.lock().unwrap();
+        storage.get(key_id)
+            .cloned()
+            .ok_or(VaultError::Keychain("Key not found".to_string()))
+    }
+
+    fn delete_key(&self, key_id: &str) -> Result<()> {
+        let mut storage = self.storage.lock().unwrap();
+        storage.remove(key_id);
+        Ok(())
+    }
+
+    fn key_exists(&self, key_id: &str) -> bool {
+        let storage = self.storage.lock().unwrap();
+        storage.contains_key(key_id)
+    }
+
+    fn list_keys(&self) -> Result<Vec<String>> {
+        let storage = self.storage.lock().unwrap();
+        Ok(storage.keys().cloned().collect())
+    }
+}
 
 /// Factory function to create platform-specific key storage
 pub fn create_key_storage() -> Box<dyn KeyStorage> {
@@ -173,5 +219,51 @@ mod tests {
         // Delete key
         storage.delete_key("test-key").unwrap();
         assert!(!storage.key_exists("test-key"));
+    }
+}
+
+/// High-level keychain manager that provides cross-platform key management
+pub struct KeychainManager {
+    storage: Box<dyn KeyStorage>,
+}
+
+impl KeychainManager {
+    /// Create a new KeychainManager with the appropriate storage backend
+    pub fn new() -> Result<Self> {
+        #[cfg(target_os = "windows")]
+        let storage = Box::new(WindowsKeyStorage::new("identra.vault")) as Box<dyn KeyStorage>;
+        
+        #[cfg(target_os = "macos")]
+        let storage = Box::new(MacOSKeyStorage::new("identra.vault")) as Box<dyn KeyStorage>;
+        
+        #[cfg(target_os = "linux")]
+        let storage = Box::new(LinuxKeyStorage::new("identra.vault")) as Box<dyn KeyStorage>;
+        
+        Ok(Self { storage })
+    }
+    
+    /// Store a key with metadata
+    pub fn store_key(&self, key_id: &str, key: &[u8], metadata: KeyMetadata) -> Result<()> {
+        self.storage.store_key(key_id, key, metadata)
+    }
+    
+    /// Retrieve a key and its metadata
+    pub fn retrieve_key(&self, key_id: &str) -> Result<(Vec<u8>, KeyMetadata)> {
+        self.storage.retrieve_key(key_id)
+    }
+    
+    /// Delete a key
+    pub fn delete_key(&self, key_id: &str) -> Result<()> {
+        self.storage.delete_key(key_id)
+    }
+    
+    /// Check if a key exists
+    pub fn key_exists(&self, key_id: &str) -> bool {
+        self.storage.key_exists(key_id)
+    }
+    
+    /// List all stored keys
+    pub fn list_keys(&self) -> Result<Vec<String>> {
+        self.storage.list_keys()
     }
 }
