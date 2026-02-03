@@ -111,6 +111,7 @@ coverage.xml
 .env.production.local
 *.env
 !.env.example
+.venv/
 
 # --- Supabase ---
 supabase/.temp/
