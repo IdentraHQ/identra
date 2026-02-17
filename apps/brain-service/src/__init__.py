@@ -1,7 +1,7 @@
 """
-Identra Brain-Service - Universal AI Memory & RAG Orchestration
+Identra Brain-Service Source Package
 
-The AI orchestration layer for the Identra confidential memory vault ecosystem.
+Core modules for AI orchestration, memory management, and RAG operations.
 """
 
 __version__ = "0.1.0"

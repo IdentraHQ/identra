@@ -44,6 +44,20 @@ try:
 except ImportError:
     GEMINI_AVAILABLE = False
 
+# Local SLM integration
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False
+
+# Identra Summarizer Service
+try:
+    from ..ai.Summarizer_service import SummarizerService
+    SUMMARIZER_AVAILABLE = True
+except ImportError:
+    SUMMARIZER_AVAILABLE = False
+
 # Identra engines
 from .universal_signal_extractor import UniversalSignalExtractor
 from .universal_memory_manager import UniversalMemoryManager
@@ -55,6 +69,7 @@ class ModelProvider(Enum):
     CLAUDE = "claude"
     OPENAI = "openai" 
     GEMINI = "gemini"
+    SLM_LOCAL = "slm_local"  # Local SLM for summarization
     FALLBACK = "fallback"
 
 class MemoryLayer(Enum):
@@ -109,6 +124,14 @@ class AIOrchestrator:
             "CREATIVE": {
                 "primary": ModelProvider.CLAUDE,    # Best for creativity
                 "fallback": ModelProvider.OPENAI
+            },
+            "SUMMARIZATION": {
+                "primary": ModelProvider.SLM_LOCAL,   # Local SLM for privacy
+                "fallback": ModelProvider.CLAUDE
+            },
+            "CONTENT_SUMMARY": {
+                "primary": ModelProvider.SLM_LOCAL,   # Keep summaries local
+                "fallback": ModelProvider.OPENAI
             }
         }
         
@@ -146,6 +169,42 @@ class AIOrchestrator:
                 logger.info("✅ Gemini client initialized")
             except Exception as e:
                 logger.warning(f"Failed to initialize Gemini: {e}")
+
+        # Local SLM (Summarizer Service Integration)
+        if SUMMARIZER_AVAILABLE:
+            try:
+                # Initialize the working summarizer service
+                self.clients[ModelProvider.SLM_LOCAL] = SummarizerService()
+                logger.info("✅ Local SLM (Summarizer) initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize local SLM: {e}")
+        elif OLLAMA_AVAILABLE:
+            try:
+                # Fallback to direct ollama if summarizer service unavailable
+                models = ollama.list()
+                available_models = [m['name'] for m in models.get('models', [])]
+                
+                # Prefer llama3.1 or mistral for summarization
+                summarization_models = ['llama3.1:latest', 'llama3.1', 'mistral:7b']
+                selected_model = None
+                
+                for model in summarization_models:
+                    if model in available_models:
+                        selected_model = model
+                        break
+                
+                if selected_model:
+                    self.clients[ModelProvider.SLM_LOCAL] = {
+                        'client': ollama,
+                        'model': selected_model,
+                        'type': 'direct_ollama'
+                    }
+                    logger.info(f"✅ Direct Ollama SLM initialized: {selected_model}")
+                else:
+                    logger.warning("No suitable Ollama models found for local SLM")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to initialize Ollama SLM: {e}")
 
     def _get_available_providers(self) -> List[str]:
         """Get list of available AI providers"""
@@ -254,19 +313,19 @@ class AIOrchestrator:
             fresh_signals = signals.copy()
             fresh_signals['memory_scope'] = 'RECENT_SESSION'
             fresh_context = self.memory_manager.retrieve_context(
-                session_id, fresh_signals, max_results=5
+                session_id, fresh_signals, limit=5
             )
             context_layers["fresh"] = fresh_context
             
             # MEDIUM MEMORY: Related recent context (entity-based)
             if signals.get('key_entities'):
                 medium_signals = {
-                    'key_entities': signals['key_entities'],
+                    'key_entities': signals.get('key_entities', []),
                     'context_theme': signals.get('context_theme'),
                     'memory_scope': 'RELATED_TOPICS'
                 }
                 medium_context = self.memory_manager.retrieve_context(
-                    session_id, medium_signals, max_results=3
+                    session_id, medium_signals, limit=3
                 )
                 # Filter out fresh memories to avoid duplication
                 medium_context = [
@@ -282,7 +341,7 @@ class AIOrchestrator:
                 'memory_scope': 'FULL_CONTEXT'
             }
             long_context = self.memory_manager.retrieve_context(
-                session_id, long_signals, max_results=2
+                session_id, long_signals, limit=2
             )
             # Filter out already retrieved memories
             existing_contexts = fresh_context + context_layers["medium"]
@@ -363,6 +422,8 @@ class AIOrchestrator:
                 return await self._call_openai(context_prompt)
             elif model == ModelProvider.GEMINI:
                 return await self._call_gemini(context_prompt)
+            elif model == ModelProvider.SLM_LOCAL:
+                return await self._call_local_slm(user_input, signals, context_layers)
             else:
                 return "Model not configured properly."
                 
@@ -447,6 +508,128 @@ class AIOrchestrator:
         except Exception as e:
             logger.error(f"Gemini API error: {e}")
             raise
+
+    async def _call_local_slm(
+        self, 
+        user_input: str, 
+        signals: Dict[str, Any], 
+        context_layers: Dict[str, List[Dict]]
+    ) -> str:
+        """Call Local SLM using the integrated Summarizer Service"""
+        try:
+            client = self.clients[ModelProvider.SLM_LOCAL]
+            
+            # Check if we have the SummarizerService or direct ollama
+            if isinstance(client, SummarizerService):
+                # Use the production summarizer service
+                conversation_type = signals.get('conversation_type', 'GENERAL_CHAT')
+                
+                if conversation_type in ['SUMMARIZATION', 'CONTENT_SUMMARY']:
+                    # Direct summarization request
+                    from ..ai.Summarizer_service import SummarizationRequest, SummarizationOptions
+                    
+                    request = SummarizationRequest(
+                        text=user_input,
+                        options=SummarizationOptions(
+                            model="llama3.1",
+                            format="bullet_points",
+                            technical_accuracy=True,
+                            privacy_mode=True
+                        )
+                    )
+                    response = await client.summarize(request)
+                    return response.summary
+                else:
+                    # General conversation - build context-aware prompt
+                    context_prompt = self._build_context_prompt(user_input, context_layers, signals)
+                    
+                    # Use direct ollama call for conversation
+                    import ollama
+                    response = ollama.chat(
+                        model="llama3.1",
+                        messages=[
+                            {'role': 'system', 'content': 'You are Identra AI, a helpful assistant.'},
+                            {'role': 'user', 'content': context_prompt}
+                        ],
+                        options={'temperature': 0.7, 'num_ctx': 8192}
+                    )
+                    return response['message']['content']
+                    
+            elif isinstance(client, dict) and client.get('type') == 'direct_ollama':
+                # Direct ollama fallback
+                context_prompt = self._build_context_prompt(user_input, context_layers, signals)
+                
+                response = client['client'].chat(
+                    model=client['model'],
+                    messages=[
+                        {'role': 'system', 'content': 'You are Identra AI, a helpful assistant.'},
+                        {'role': 'user', 'content': context_prompt}
+                    ],
+                    options={'temperature': 0.7}
+                )
+                return response['message']['content']
+            else:
+                return "Local SLM not properly configured."
+                
+        except Exception as e:
+            logger.error(f"Local SLM error: {e}")
+            raise
+
+    async def summarize_content(self, content: str, session_id: str = "summary") -> Dict[str, Any]:
+        """
+        Public method for direct content summarization using local SLM.
+        Integrates with the main orchestrator flow.
+        """
+        start_time = time.time()
+        
+        try:
+            # Force summarization by setting conversation type
+            signals = {
+                'conversation_type': 'SUMMARIZATION',
+                'context_theme': 'CONTENT_ANALYSIS',
+                'key_entities': [],
+                'conversation_state': 'SINGLE_REQUEST'
+            }
+            
+            # Use local SLM for summarization
+            if ModelProvider.SLM_LOCAL in self.clients:
+                response = await self._call_local_slm(content, signals, {'fresh': [], 'medium': [], 'long': []})
+                
+                return {
+                    "summary": response,
+                    "model_used": "slm_local",
+                    "original_length": len(content),
+                    "summary_length": len(response),
+                    "compression_ratio": round(len(response) / len(content), 2),
+                    "processing_time": round((time.time() - start_time) * 1000, 2)
+                }
+            else:
+                # Fallback to cloud models
+                selected_model = self._select_model(signals)
+                response = await self._generate_response(
+                    f"Please provide a concise summary: {content}",
+                    signals,
+                    {'fresh': [], 'medium': [], 'long': []},
+                    selected_model
+                )
+                
+                return {
+                    "summary": response,
+                    "model_used": selected_model.value,
+                    "original_length": len(content),
+                    "summary_length": len(response),
+                    "compression_ratio": round(len(response) / len(content), 2),
+                    "processing_time": round((time.time() - start_time) * 1000, 2)
+                }
+                
+        except Exception as e:
+            logger.error(f"Summarization failed: {e}")
+            return {
+                "summary": "Unable to generate summary at this time.",
+                "model_used": "error",
+                "error": str(e),
+                "processing_time": round((time.time() - start_time) * 1000, 2)
+            }
 
 # --- Integration Test ---
 if __name__ == "__main__":

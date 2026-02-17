@@ -1,11 +1,10 @@
 """
-Engine package for Identra Brain-Service core processing components.
+Identra Brain Engine Module
 
-This package contains the universal signal extraction, memory management,
-and context building components evolved from your context-package-engine.
+Core AI orchestration logic for universal conversation processing,
+context building, and multi-model routing.
 """
 
-# Import will be done lazily to avoid circular import issues
-# from .universal_signal_extractor import UniversalSignalExtractor
+from .universal_brain import UniversalBrainService
 
-__all__ = ["UniversalSignalExtractor"]
+__all__ = ["UniversalBrainService"]
