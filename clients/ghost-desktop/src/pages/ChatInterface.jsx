@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { 
   Send, 
   Search,
@@ -13,7 +13,8 @@ import {
   Shield,
   LogOut,
   ChevronDown,
-  Check
+  Check,
+  History
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -52,6 +53,8 @@ export default function ChatInterface() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [rightTab, setRightTab] = useState("history"); // history | context
+  const [historySearch, setHistorySearch] = useState("");
   const [theme, setTheme] = useState(() => {
     try {
       const stored = localStorage.getItem("identra-theme");
@@ -115,6 +118,27 @@ export default function ChatInterface() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        textareaRef.current?.focus();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+        e.preventDefault();
+        setRightPanelOpen((v) => !v);
+      }
+      if (e.key === "Escape") {
+        setProfileOpen(false);
+        setSettingsOpen(false);
+        setThemeOpen(false);
+      }
+    };
+    globalThis.addEventListener("keydown", onKeyDown);
+    return () => globalThis.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing) return;
@@ -275,11 +299,21 @@ export default function ChatInterface() {
 
   const currentModel = models.find(m => m.id === selectedModel);
 
+  const filteredHistory = useMemo(() => {
+    const q = historySearch.trim().toLowerCase();
+    if (!q) return conversationHistory;
+    return conversationHistory.filter((item) => {
+      const hay = `${item.id} ${item.model || ""} ${item.timestamp || ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [conversationHistory, historySearch]);
+
   return (
-    <div className="flex h-screen bg-identra-bg text-identra-text-primary font-sans antialiased">
+    <div className="flex h-screen bg-identra-bg text-identra-text-primary font-sans antialiased identra-bg-tech">
+      <div className="identra-noise" aria-hidden />
       
       {/* Left Section - Icon strip */}
-      <aside className="w-14 bg-identra-surface/80 border-r border-identra-divider flex flex-col items-center py-4 gap-1 shrink-0 shadow-soft">
+      <aside className="w-14 bg-identra-surface/70 identra-glass identra-panel-3d border-r border-identra-divider flex flex-col items-center py-4 gap-1 shrink-0 shadow-soft">
         <button
           title="User Profile"
           onClick={() => {
@@ -287,7 +321,7 @@ export default function ChatInterface() {
             setRightPanelOpen(false);
             setProfileOpen((v) => !v);
           }}
-          className="button-glow p-2.5 rounded-lg transition-all duration-300 hover:shadow-glow hover:scale-105 active:animate-button-press shadow-soft lighting-subtle"
+          className="button-glow identra-focus-ring p-2.5 rounded-lg transition-all duration-300 hover:shadow-glow hover:scale-105 active:animate-button-press shadow-soft lighting-subtle"
         >
           <User className="w-5 h-5 text-identra-text-tertiary hover:text-identra-text-primary transition-colors duration-200" />
         </button>
@@ -298,7 +332,7 @@ export default function ChatInterface() {
             setRightPanelOpen((v) => !v);
             // Add visual feedback
           }}
-          className={`button-glow p-2.5 rounded-lg transition-all duration-300 hover:shadow-glow hover:scale-105 active:animate-button-press shadow-soft lighting-subtle ${
+          className={`button-glow identra-focus-ring p-2.5 rounded-lg transition-all duration-300 hover:shadow-glow hover:scale-105 active:animate-button-press shadow-soft lighting-subtle ${
             rightPanelOpen ? "text-identra-text-primary bg-identra-surface-elevated/80 shadow-glow" : "text-identra-text-tertiary hover:text-identra-text-primary"
           }`}
         >
@@ -311,7 +345,7 @@ export default function ChatInterface() {
             setRightPanelOpen(false);
             setSettingsOpen((v) => !v);
           }}
-          className="button-glow p-2.5 rounded-lg transition-all duration-300 hover:shadow-glow hover:scale-105 active:animate-button-press shadow-soft lighting-subtle"
+          className="button-glow identra-focus-ring p-2.5 rounded-lg transition-all duration-300 hover:shadow-glow hover:scale-105 active:animate-button-press shadow-soft lighting-subtle"
         >
           <Settings className="w-5 h-5 text-identra-text-tertiary hover:text-identra-text-primary transition-colors duration-200" />
         </button>
@@ -325,12 +359,12 @@ export default function ChatInterface() {
             aria-hidden
             onClick={() => setProfileOpen(false)}
           />
-          <div className="fixed left-14 top-0 bottom-0 w-72 bg-identra-surface border-r border-identra-divider z-50 flex flex-col shadow-strong animate-slide-in-left">
+          <div className="fixed left-14 top-0 bottom-0 w-72 bg-identra-surface/70 identra-glass border-r border-identra-divider z-50 flex flex-col shadow-strong animate-slide-in-left">
             <div className="flex items-center justify-between px-4 py-3 border-b border-identra-border-subtle">
               <span className="text-xs font-semibold text-identra-text-secondary uppercase tracking-wider">Profile</span>
               <button
                 onClick={() => setProfileOpen(false)}
-                className="p-1.5 rounded-md text-identra-text-tertiary hover:text-identra-text-primary hover:bg-identra-surface-elevated transition-colors"
+                className="identra-focus-ring p-1.5 rounded-md text-identra-text-tertiary hover:text-identra-text-primary hover:bg-identra-surface-elevated transition-colors"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -364,12 +398,12 @@ export default function ChatInterface() {
             aria-hidden
             onClick={() => setSettingsOpen(false)}
           />
-          <div className="fixed left-14 top-0 bottom-0 w-72 bg-identra-surface border-r border-identra-divider z-50 flex flex-col shadow-strong animate-slide-in-left">
+          <div className="fixed left-14 top-0 bottom-0 w-72 bg-identra-surface/70 identra-glass border-r border-identra-divider z-50 flex flex-col shadow-strong animate-slide-in-left">
             <div className="flex items-center justify-between px-4 py-3 border-b border-identra-border-subtle">
               <span className="text-xs font-semibold text-identra-text-secondary uppercase tracking-wider">Settings</span>
               <button
                 onClick={() => setSettingsOpen(false)}
-                className="p-1.5 rounded-md text-identra-text-tertiary hover:text-identra-text-primary hover:bg-identra-surface-elevated transition-colors"
+                className="identra-focus-ring p-1.5 rounded-md text-identra-text-tertiary hover:text-identra-text-primary hover:bg-identra-surface-elevated transition-colors"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -450,264 +484,333 @@ export default function ChatInterface() {
 
       {/* Middle Section - Chat */}
       <main className="flex-1 flex flex-col min-w-0 border-r border-identra-divider shadow-soft lighting-subtle">
+        {/* Header */}
+        <div className="px-6 py-3 border-b border-identra-border-subtle flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold tracking-[0.18em] text-identra-text-tertiary uppercase">
+                Identra
+              </span>
+              <span className="text-[10px] text-identra-text-muted">
+                {sessionInitialized ? "Vault unlocked" : "Initializing…"}
+              </span>
+            </div>
+            <div className="text-[10px] text-identra-text-muted mt-0.5">
+              <kbd className="px-1.5 py-0.5 bg-identra-surface-elevated border border-identra-border text-[10px] font-mono">Ctrl</kbd>
+              <span className="mx-1">+</span>
+              <kbd className="px-1.5 py-0.5 bg-identra-surface-elevated border border-identra-border text-[10px] font-mono">K</kbd>
+              <span className="mx-2">·</span>
+              <kbd className="px-1.5 py-0.5 bg-identra-surface-elevated border border-identra-border text-[10px] font-mono">Ctrl</kbd>
+              <span className="mx-1">+</span>
+              <kbd className="px-1.5 py-0.5 bg-identra-surface-elevated border border-identra-border text-[10px] font-mono">/</kbd>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {models.map((model) => (
+              <button
+                key={model.id}
+                onClick={() => setSelectedModel(model.id)}
+                className={`identra-focus-ring flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs transition-all lift-hover ${
+                  selectedModel === model.id
+                    ? "border-identra-primary/70 bg-identra-surface/70 shadow-glow"
+                    : "border-identra-border-subtle bg-identra-surface/40 hover:border-identra-primary/50"
+                }`}
+                title={model.name}
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{
+                    background:
+                      model.id === "claude"
+                        ? "color-mix(in srgb, var(--identra-accent) 85%, white)"
+                        : model.id === "gemini"
+                          ? "color-mix(in srgb, var(--identra-accent-2) 85%, white)"
+                          : "color-mix(in srgb, var(--identra-primary) 85%, white)"
+                  }}
+                />
+                <span className="hidden sm:inline text-identra-text-secondary">{model.id.toUpperCase()}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-8 py-8">
+        <div className="flex-1 overflow-y-auto px-8 py-8 pb-44">
           {messages.length === 0 ? (
             <div className="flex flex-col h-full items-center justify-center px-4">
               <div className="w-full max-w-2xl">
-                {/* IDENTRA + chat blended into background — no box */}
-                <div className="mb-5 text-center">
-                  <h2 className="text-2xl font-bold tracking-tight text-identra-text-primary drop-shadow-[0_0_16px_rgba(120,119,198,0.5)]">
+                <div className="mb-6 text-center">
+                  <h2 className="text-3xl font-bold tracking-tight text-identra-text-primary drop-shadow-[0_0_22px_var(--identra-glow)]">
                     IDENTRA
                   </h2>
+                  <p className="text-sm text-identra-text-tertiary mt-2">
+                    Ask anything. Your session is {sessionInitialized ? "ready" : "initializing"}.
+                  </p>
                 </div>
-                <div className="space-y-4">
-                  <div className="relative">
-                    <textarea
-                      ref={textareaRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      placeholder="Type a message to Identra to get started..."
-                      className="w-full bg-identra-surface/60 border border-identra-border-subtle focus:border-identra-primary/70 rounded-lg px-4 py-4 pr-12 text-sm text-identra-text-primary placeholder:text-identra-text-tertiary outline-none transition-all duration-300 focus:bg-identra-surface/80 backdrop-blur-sm resize-none overflow-y-auto shadow-soft hover:shadow-medium focus:shadow-glow lighting-subtle"
-                      disabled={isProcessing}
-                      style={{ minHeight: '80px', maxHeight: '400px' }}
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={!input.trim() || isProcessing}
-                      className="absolute right-3 bottom-3 p-2 text-identra-text-tertiary hover:text-identra-text-primary disabled:text-identra-text-disabled hover:bg-identra-surface/80 rounded transition-all duration-200 hover:shadow-glow active:animate-button-press"
-                    >
-                      <Send className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3 justify-end">
-                    <span className="text-[10px] font-semibold text-identra-text-tertiary/80 uppercase tracking-[0.16em] shrink-0">
-                      {currentModel?.name}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {models.map((model) => (
-                        <button
-                          key={model.id}
-                          onClick={() => setSelectedModel(model.id)}
-                          className={`flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-100 p-1.5 ${
-                            selectedModel === model.id
-                              ? 'border-identra-primary/80 bg-identra-surface/80 shadow-[0_0_10px_rgba(120,119,198,0.5)]'
-                              : 'border-identra-border-subtle bg-identra-surface/60 hover:border-identra-primary/60'
-                          }`}
-                          title={model.name}
-                        >
-                          {(() => {
-                          const Icon = modelIcons[model.id];
-                          return Icon ? <Icon className="w-full h-full text-identra-text-secondary" /> : null;
-                        })()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+
+                <div className="grid gap-3">
+                  <button
+                    onClick={() => setInput("Summarize the last conversation and extract action items.")}
+                    className="identra-focus-ring identra-glass identra-panel-3d tilt-hover-3d px-4 py-3 rounded-xl border border-identra-border-subtle text-left"
+                  >
+                    <div className="text-[10px] font-semibold tracking-[0.18em] uppercase text-identra-text-tertiary">Quick start</div>
+                    <div className="text-sm text-identra-text-primary mt-1">Summarize and extract action items</div>
+                  </button>
+                  <button
+                    onClick={() => setInput("Search my recent chats for authentication-related decisions.")}
+                    className="identra-focus-ring identra-glass identra-panel-3d tilt-hover-3d px-4 py-3 rounded-xl border border-identra-border-subtle text-left"
+                  >
+                    <div className="text-[10px] font-semibold tracking-[0.18em] uppercase text-identra-text-tertiary">Quick start</div>
+                    <div className="text-sm text-identra-text-primary mt-1">Search history for “authentication”</div>
+                  </button>
                 </div>
               </div>
             </div>
           ) : (
             <div className="space-y-6 max-w-full">
               {messages.map((msg) => (
-                <div 
-                  key={msg.id} 
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div className="w-[60%] flex flex-col gap-2">
-                    <div className={`px-4 py-3 rounded-lg shadow-soft lighting-subtle transition-all duration-200 hover:shadow-medium ${
-                      msg.role === 'user' 
-                        ? 'bg-identra-surface-elevated border border-identra-border text-identra-text-primary ml-auto' 
-                        : 'bg-identra-surface border border-identra-border-subtle text-identra-text-primary mr-auto'
-                    }`}>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    <div
+                      className={`px-4 py-3 rounded-xl shadow-soft lighting-subtle transition-all duration-200 hover:shadow-medium tilt-hover-3d ${
+                        msg.role === "user"
+                          ? "identra-bubble-user text-identra-text-primary ml-auto"
+                          : "identra-bubble-assistant text-identra-text-primary mr-auto"
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {msg.content}
+                      </p>
                     </div>
-                    <div className={`flex items-center gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`identra-bubble-meta flex items-center gap-2 ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
                       {msg.model && (
                         <span className="text-[9px] text-identra-text-muted uppercase tracking-wider">
-                          {models.find(m => m.id === msg.model)?.name}
+                          {models.find((m) => m.id === msg.model)?.name}
                         </span>
                       )}
                       <span className="text-[9px] text-identra-text-muted">
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {msg.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
                       </span>
                     </div>
                   </div>
                 </div>
               ))}
-              
+
               {isProcessing && (
                 <div className="flex justify-start">
                   <div className="w-[60%] flex flex-col gap-2">
-                    <div className="px-4 py-3 bg-identra-surface border border-identra-border-subtle rounded-lg mr-auto">
+                    <div className="px-4 py-3 bg-identra-surface border border-identra-border-subtle rounded-xl mr-auto identra-panel-3d">
                       <div className="flex gap-1">
                         <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse"></span>
-                        <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
-                        <span className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
+                        <span
+                          className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse"
+                          style={{ animationDelay: "0.2s" }}
+                        ></span>
+                        <span
+                          className="w-1.5 h-1.5 bg-identra-text-muted rounded-full animate-pulse"
+                          style={{ animationDelay: "0.4s" }}
+                        ></span>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
-              <div ref={messagesEndRef} />
 
-              {/* Chat input blended into background — no box */}
-              <div className="max-w-5xl mx-auto pt-6 px-4">
-                <div className="mb-4 text-center">
-                  <h2 className="text-xl font-bold tracking-tight text-identra-text-primary drop-shadow-[0_0_12px_rgba(120,119,198,0.5)]">
-                    IDENTRA
-                  </h2>
-                </div>
-                <div className="space-y-4">
-                  <div className="relative">
-                    <textarea
-                      ref={textareaRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      placeholder="Type a message to Identra..."
-                      className="w-full bg-identra-surface/60 border border-identra-border-subtle focus:border-identra-primary/70 rounded-lg px-4 py-4 pr-12 text-sm text-identra-text-primary placeholder:text-identra-text-tertiary outline-none transition-all duration-300 focus:bg-identra-surface/80 backdrop-blur-sm resize-none overflow-y-auto shadow-soft hover:shadow-medium focus:shadow-glow lighting-subtle"
-                      disabled={isProcessing}
-                      style={{ minHeight: '80px', maxHeight: '400px' }}
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={!input.trim() || isProcessing}
-                      className="absolute right-3 bottom-3 p-2 text-identra-text-tertiary hover:text-identra-text-primary disabled:text-identra-text-disabled hover:bg-identra-surface/80 rounded transition-all duration-200 hover:shadow-glow active:animate-button-press"
-                    >
-                      <Send className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3 justify-end">
-                    <span className="text-[10px] font-semibold text-identra-text-tertiary/80 uppercase tracking-[0.16em] shrink-0">
-                      {currentModel?.name}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {models.map((model) => (
-                        <button
-                          key={model.id}
-                          onClick={() => setSelectedModel(model.id)}
-                          className={`flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-300 p-1.5 hover:scale-110 active:animate-button-press shadow-soft hover:shadow-glow lighting-subtle ${
-                            selectedModel === model.id
-                              ? 'border-identra-primary/80 bg-identra-surface/80 shadow-glow animate-pulse-glow'
-                              : 'border-identra-border-subtle bg-identra-surface/60 hover:border-identra-primary/60'
-                          }`}
-                          title={model.name}
-                        >
-                          {(() => {
-                          const Icon = modelIcons[model.id];
-                          return Icon ? <Icon className="w-full h-full text-identra-text-secondary" /> : null;
-                        })()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <div ref={messagesEndRef} />
             </div>
           )}
+        </div>
+
+        {/* Sticky composer (single source of truth) */}
+        <div className="shrink-0 border-t border-identra-border-subtle px-6 py-4 bg-identra-surface/40 identra-glass">
+          <div className="max-w-5xl mx-auto">
+            <div className="relative identra-neon-frame identra-panel-3d rounded-2xl">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder={sessionInitialized ? "Type a message to Identra…" : "Initializing session…"}
+                className="w-full bg-identra-surface/50 border border-identra-border-subtle focus:border-identra-primary/70 rounded-2xl px-4 py-4 pr-12 text-sm text-identra-text-primary placeholder:text-identra-text-tertiary outline-none transition-all duration-300 focus:bg-identra-surface/70 backdrop-blur-sm resize-none overflow-y-auto shadow-soft hover:shadow-medium focus:shadow-glow lighting-subtle identra-focus-ring"
+                disabled={isProcessing || !sessionInitialized}
+                style={{ minHeight: "64px", maxHeight: "260px" }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isProcessing || !sessionInitialized}
+                className="absolute right-3 bottom-3 p-2 text-identra-text-tertiary hover:text-identra-text-primary disabled:text-identra-text-disabled hover:bg-identra-surface/80 rounded-xl transition-all duration-200 hover:shadow-glow active:animate-button-press identra-focus-ring"
+                aria-label="Send"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-[10px] font-semibold text-identra-text-tertiary/80 uppercase tracking-[0.16em]">
+                {currentModel?.name}
+              </span>
+              <span className="text-[10px] text-identra-text-muted">
+                Enter to send • Shift+Enter for new line
+              </span>
+            </div>
+          </div>
         </div>
       </main>
 
       {/* Right Section - Model Context and Recent Chats */}
       {rightPanelOpen && (
-        <aside className="w-72 bg-identra-surface border-l border-identra-divider flex flex-col shadow-medium lighting-accent animate-slide-in-right">
-        {/* Model Context and Audits */}
-        <div className="px-4 py-5 border-b border-identra-border-subtle">
-          <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em] mb-4">
-            Model Context
-          </h3>
-          <div className="space-y-2.5">
-            {contextDocuments.map((doc) => {
-              const docModel = models.find(m => m.id === doc.model);
-              return (
-                <div 
-                  key={doc.id}
-                  className="px-3 py-2.5 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary transition-all duration-300 cursor-pointer group rounded shadow-soft hover:shadow-glow lighting-subtle hover:scale-[1.02] active:animate-button-press"
-                >
-                  <div className="flex items-start gap-2.5 mb-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-identra-active shrink-0 mt-1.5"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-identra-text-primary font-medium truncate group-hover:text-identra-text-primary">
-                        {doc.name}
-                      </p>
-                      <p className="text-[10px] text-identra-text-muted mt-1">
-                        {doc.size}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-identra-border-subtle pt-2 mt-2">
-                    <span className="text-[10px] text-identra-text-tertiary uppercase tracking-wider font-medium">
-                      {docModel.name}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <aside className="w-72 bg-identra-surface/70 identra-glass identra-panel-3d border-l border-identra-divider flex flex-col shadow-medium lighting-accent animate-slide-in-right identra-neon-frame">
+          {/* Tabs + Search */}
+          <div className="px-4 pt-4 pb-3 border-b border-identra-border-subtle space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setRightTab("history")}
+                className={`identra-focus-ring px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase border transition-colors ${
+                  rightTab === "history"
+                    ? "bg-identra-surface-elevated border-identra-primary/60 text-identra-text-primary shadow-soft"
+                    : "bg-identra-surface/40 border-identra-border-subtle text-identra-text-tertiary hover:text-identra-text-secondary"
+                }`}
+              >
+                History
+              </button>
+              <button
+                onClick={() => setRightTab("context")}
+                className={`identra-focus-ring px-3 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase border transition-colors ${
+                  rightTab === "context"
+                    ? "bg-identra-surface-elevated border-identra-primary/60 text-identra-text-primary shadow-soft"
+                    : "bg-identra-surface/40 border-identra-border-subtle text-identra-text-tertiary hover:text-identra-text-secondary"
+                }`}
+              >
+                Context
+              </button>
+            </div>
 
-        </div>
-
-        {/* Recent Chats */}
-        <div className="flex-1 overflow-y-auto px-4 py-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
-              Recent Chats
-            </h3>
-            <Search className="w-3.5 h-3.5 text-identra-text-tertiary" />
-          </div>
-          <div className="space-y-2">
-            {conversationHistory.length === 0 ? (
-              <div className="px-3 py-6 text-center bg-identra-surface-elevated border border-identra-border rounded">
-                <p className="text-[10px] text-identra-text-muted">No conversations yet</p>
+            {rightTab === "history" && (
+              <div className="relative">
+                <Search className="w-4 h-4 text-identra-text-tertiary absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  placeholder="Search conversations…"
+                  className="w-full pl-9 pr-3 py-2 rounded-lg bg-identra-surface/40 border border-identra-border-subtle text-xs text-identra-text-primary placeholder:text-identra-text-tertiary outline-none focus:border-identra-primary/60 transition-colors identra-focus-ring"
+                />
               </div>
-            ) : (
-              conversationHistory.map((item) => {
-                const timestamp = new Date(item.timestamp * 1000);
-                const timeAgo = Math.floor((Date.now() - timestamp) / 1000 / 60);
-                let timeStr;
-                if (timeAgo < 60) {
-                  timeStr = `${timeAgo}m ago`;
-                } else if (timeAgo < 1440) {
-                  timeStr = `${Math.floor(timeAgo / 60)}h ago`;
-                } else {
-                  timeStr = `${Math.floor(timeAgo / 1440)}d ago`;
-                }
-                
-                // Try to parse and show user message as preview
-                let title = "Conversation";
-                
-                return (
-                  <button
-                    key={item.id} 
-                    onClick={() => handleLoadConversation(item)}
-                    className="w-full px-3 py-3 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary cursor-pointer transition-all duration-300 group rounded shadow-soft hover:shadow-glow lighting-subtle hover:scale-[1.02] active:animate-button-press text-left"
-                  >
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
-                      <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-2 flex-1">
-                        {title}
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-identra-text-muted pl-6">{timeStr}</p>
-                  </button>
-                );
-              })
             )}
           </div>
-        </div>
 
-        {/* Footer Status */}
-        <div className="px-4 py-3 border-t border-identra-border-subtle">
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-identra-active"></div>
-            <div className="text-[10px] text-identra-text-tertiary text-center tracking-[0.1em] font-semibold">
-              CROSS-MODEL SYNC ACTIVE
+          {/* Body */}
+          {rightTab === "context" ? (
+            <div className="flex-1 overflow-y-auto px-4 py-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
+                  Model Context
+                </h3>
+                <span className="text-[10px] text-identra-text-tertiary uppercase tracking-wider">
+                  {models.find(m => m.id === selectedModel)?.id}
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {contextDocuments.map((doc) => {
+                  const docModel = models.find(m => m.id === doc.model);
+                  return (
+                    <div 
+                      key={doc.id}
+                      className="px-3 py-2.5 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary transition-all duration-300 cursor-pointer group rounded-xl shadow-soft hover:shadow-glow lighting-subtle hover:scale-[1.02] active:animate-button-press lift-hover tilt-hover-3d"
+                    >
+                      <div className="flex items-start gap-2.5 mb-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-identra-active shrink-0 mt-1.5"></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-identra-text-primary font-medium truncate group-hover:text-identra-text-primary">
+                            {doc.name}
+                          </p>
+                          <p className="text-[10px] text-identra-text-muted mt-1">
+                            {doc.size}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-identra-border-subtle pt-2 mt-2">
+                        <span className="text-[10px] text-identra-text-tertiary uppercase tracking-wider font-medium">
+                          {docModel?.name}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto px-4 py-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[10px] font-semibold text-identra-text-secondary uppercase tracking-[0.1em]">
+                  Recent Chats
+                </h3>
+                <History className="w-3.5 h-3.5 text-identra-text-tertiary" />
+              </div>
+
+              <div className="space-y-2">
+                {filteredHistory.length === 0 ? (
+                  <div className="px-3 py-6 text-center bg-identra-surface-elevated border border-identra-border rounded">
+                    <p className="text-[10px] text-identra-text-muted">
+                      {conversationHistory.length === 0 ? "No conversations yet" : "No matches"}
+                    </p>
+                  </div>
+                ) : (
+                  filteredHistory.map((item) => {
+                    const timestamp = new Date(item.timestamp * 1000);
+                    const timeAgo = Math.floor((Date.now() - timestamp) / 1000 / 60);
+                    let timeStr;
+                    if (timeAgo < 60) {
+                      timeStr = `${timeAgo}m ago`;
+                    } else if (timeAgo < 1440) {
+                      timeStr = `${Math.floor(timeAgo / 60)}h ago`;
+                    } else {
+                      timeStr = `${Math.floor(timeAgo / 1440)}d ago`;
+                    }
+
+                    const title = `Conversation ${String(item.id).slice(0, 6)}`;
+
+                    return (
+                      <button
+                        key={item.id} 
+                        onClick={() => handleLoadConversation(item)}
+                        className="identra-focus-ring w-full px-3 py-3 bg-identra-surface-elevated border border-identra-border hover:border-identra-primary cursor-pointer transition-all duration-300 group rounded-xl shadow-soft hover:shadow-glow lighting-subtle hover:scale-[1.02] active:animate-button-press text-left lift-hover tilt-hover-3d"
+                      >
+                        <div className="flex items-center gap-2.5 mb-2">
+                          <FileText className="w-3.5 h-3.5 text-identra-text-tertiary group-hover:text-identra-text-secondary" />
+                          <p className="text-xs text-identra-text-secondary group-hover:text-identra-text-primary font-medium line-clamp-2 flex-1">
+                            {title}
+                          </p>
+                        </div>
+                        <p className="text-[10px] text-identra-text-muted pl-6">{timeStr}</p>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Footer Status */}
+          <div className="px-4 py-3 border-t border-identra-border-subtle">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-identra-active"></div>
+              <div className="text-[10px] text-identra-text-tertiary text-center tracking-[0.1em] font-semibold">
+                CROSS-MODEL SYNC ACTIVE
+              </div>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
       )}
     </div>
   );

@@ -82,7 +82,8 @@ export default function Launcher() {
       background: 'transparent',
       overflow: 'hidden'
     }}>
-      <div className="w-full max-w-3xl flex flex-col gap-5 items-center" style={{ background: 'transparent' }}>
+      <div className="w-full max-w-3xl flex flex-col gap-5 items-center identra-bg-tech" style={{ background: 'transparent' }}>
+        <div className="identra-noise" aria-hidden />
         
         {/* Title - Refined typography */}
         <div className="text-center space-y-1.5">
@@ -98,7 +99,7 @@ export default function Launcher() {
         </div>
 
         {/* Search Box - More refined */}
-        <div className="w-full bg-identra-bg border border-identra-border shadow-2xl overflow-hidden">
+        <div className="w-full bg-identra-surface/60 identra-glass identra-panel-3d border border-identra-border shadow-2xl overflow-hidden rounded-xl identra-neon-frame">
           <form onSubmit={handleSubmit}>
             <div className="flex items-center gap-3 px-5 py-3.5">
               <Command className="w-4 h-4 text-identra-text-tertiary shrink-0" strokeWidth={2} />
@@ -108,7 +109,7 @@ export default function Launcher() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Ask Identra..."
-                className="flex-1 bg-transparent text-identra-text-primary placeholder:text-identra-text-tertiary outline-none text-sm"
+                className="flex-1 bg-transparent text-identra-text-primary placeholder:text-identra-text-tertiary outline-none text-sm identra-focus-ring"
                 disabled={isProcessing}
                 autoFocus
               />
@@ -130,7 +131,7 @@ export default function Launcher() {
               <button
                 key={action.id}
                 onClick={() => setQuery(action.text)}
-                className="w-full px-4 py-2.5 bg-identra-surface border border-identra-border hover:border-identra-primary hover:bg-identra-surface-hover transition-all duration-75 text-left flex items-center justify-between group"
+                className="identra-focus-ring w-full px-4 py-2.5 bg-identra-surface/60 identra-glass identra-panel-3d border border-identra-border hover:border-identra-primary hover:bg-identra-surface-hover transition-all duration-150 text-left flex items-center justify-between group lift-hover tilt-hover-3d rounded-xl"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-[9px] text-identra-text-tertiary font-semibold tracking-wider uppercase">
@@ -148,7 +149,7 @@ export default function Launcher() {
 
         {/* Messages - Professional layout */}
         {messages.length > 0 && (
-          <div className="w-full bg-identra-bg border border-identra-border shadow-2xl p-5 max-h-[450px] overflow-y-auto space-y-3">
+          <div className="w-full bg-identra-surface/60 identra-glass identra-panel-3d border border-identra-border shadow-2xl p-5 max-h-[450px] overflow-y-auto space-y-3 rounded-xl identra-neon-frame">
             {messages.map((msg) => (
               <div 
                 key={msg.id} 
